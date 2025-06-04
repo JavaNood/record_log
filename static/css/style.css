@@ -1,0 +1,337 @@
+/* ==============================================
+   基础样式和天空淡蓝色背景
+   ============================================== */
+
+/* 全局样式 */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    
+    /* 天空淡蓝色渐变背景 */
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 25%, #90caf9 50%, #e1f5fe 75%, #f0f8ff 100%);
+    background-attachment: fixed;
+    background-size: 400% 400%;
+    animation: skyGradient 20s ease infinite;
+}
+
+/* 天空背景动画 */
+@keyframes skyGradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* 容器样式 */
+.container {
+    max-width: 1200px;
+}
+
+/* ==============================================
+   管理员入口图标样式
+   ============================================== */
+
+.admin-entry-icon {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.admin-entry-icon a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    transition: all 0.3s ease;
+    text-decoration: none;
+    backdrop-filter: blur(10px);
+}
+
+.admin-entry-icon a:hover {
+    transform: translateY(-2px) scale(1.1);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    color: white;
+}
+
+.admin-entry-icon i {
+    font-size: 1.2rem;
+}
+
+/* ==============================================
+   导航栏样式
+   ============================================== */
+
+.navbar {
+    /* 天空淡蓝色渐变背景，与页面背景一致 */
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 25%, #90caf9 50%, #e1f5fe 75%, #f0f8ff 100%) !important;
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2c3e50 !important;
+    text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8);
+}
+
+.nav-link {
+    font-weight: 500;
+    padding: 0.5rem 1rem !important;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    color: #2c3e50 !important;
+}
+
+.nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    color: #1a252f !important;
+}
+
+.nav-link.active {
+    background-color: rgba(255, 255, 255, 0.4);
+    color: #1a252f !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* 导航栏切换按钮（移动端） */
+.navbar-toggler {
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.navbar-toggler:focus {
+    box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.25);
+}
+
+/* ==============================================
+   主要内容区域
+   ============================================== */
+
+.main-content {
+    min-height: calc(100vh - 200px);
+    padding-bottom: 3rem;
+}
+
+/* 欢迎语区域 */
+.welcome-section {
+    padding: 4rem 0 3rem;
+    text-align: center;
+}
+
+.welcome-title {
+    font-size: 2.5rem;
+    font-weight: 300;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.welcome-subtitle {
+    font-size: 1.2rem;
+    margin-bottom: 0;
+    opacity: 0.8;
+}
+
+/* ==============================================
+   卡片和内容样式
+   ============================================== */
+
+.card {
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    backdrop-filter: blur(10px);
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    font-weight: 600;
+}
+
+/* ==============================================
+   按钮样式
+   ============================================== */
+
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 0.5rem 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-outline-primary {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.btn-outline-primary:hover {
+    background-color: #667eea;
+    border-color: #667eea;
+    transform: translateY(-1px);
+}
+
+/* ==============================================
+   警告和消息样式
+   ============================================== */
+
+.alert {
+    border: none;
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+    margin-bottom: 1.5rem;
+}
+
+.alert-success {
+    background-color: rgba(212, 237, 218, 0.9);
+    color: #0f5132;
+}
+
+.alert-danger {
+    background-color: rgba(248, 215, 218, 0.9);
+    color: #721c24;
+}
+
+.alert-info {
+    background-color: rgba(209, 236, 241, 0.9);
+    color: #055160;
+}
+
+/* ==============================================
+   页脚样式
+   ============================================== */
+
+.footer {
+    background-color: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    margin-top: auto;
+    padding: 2rem 0 1rem;
+}
+
+.footer hr {
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* ==============================================
+   响应式设计
+   ============================================== */
+
+@media (max-width: 768px) {
+    .welcome-title {
+        font-size: 2rem;
+    }
+    
+    .welcome-subtitle {
+        font-size: 1rem;
+    }
+    
+    .welcome-section {
+        padding: 2rem 0;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .welcome-title {
+        font-size: 1.75rem;
+    }
+    
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+}
+
+/* ==============================================
+   特殊效果
+   ============================================== */
+
+/* 毛玻璃效果 */
+.glass-effect {
+    backdrop-filter: blur(10px);
+    background-color: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* 浮动动画 */
+.float-animation {
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+/* 加载动画 */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ==============================================
+   工具类
+   ============================================== */
+
+.text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.border-radius-lg {
+    border-radius: 12px;
+}
+
+.backdrop-blur {
+    backdrop-filter: blur(10px);
+}
+
+.bg-white-translucent {
+    background-color: rgba(255, 255, 255, 0.9);
+} 

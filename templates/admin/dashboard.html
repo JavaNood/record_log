@@ -1,0 +1,111 @@
+{% extends "admin/base.html" %}
+
+{% block title %}管理首页{% endblock %}
+
+{% block content %}
+<!-- 安全提示 -->
+<div class="security-notice">
+    <div class="row align-items-center">
+        <div class="col-auto">
+            <i class="fas fa-shield-alt fa-2x text-warning"></i>
+        </div>
+        <div class="col">
+            <h6 class="mb-1 text-dark">
+                <i class="fas fa-exclamation-triangle me-2"></i>安全提示
+            </h6>
+            <p class="mb-0 small text-dark">
+                默认管理员密码为 <code>admin123</code>，用户名为 <code>admin</code>。
+                为了系统安全，建议尽快修改默认密码。会话有效期为1小时，支持自动过期检测。
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- 欢迎信息 -->
+<div class="admin-card">
+    <div class="row align-items-center">
+        <div class="col">
+            <h3 class="text-primary mb-3">
+                <i class="fas fa-user-shield me-2"></i>管理员控制面板
+            </h3>
+            <p class="mb-0 text-muted">
+                这里是博客管理后台，您可以管理文章、标签、系统设置等。
+                <br>
+                <small class="text-success">
+                    <i class="fas fa-check-circle me-1"></i>
+                    Task 22已完成：文章列表管理页面已创建，支持分页和批量操作。
+                </small>
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- 功能模块 -->
+<div class="row g-4">
+    <div class="col-md-6 col-lg-4">
+        <div class="feature-card text-center">
+            <i class="fas fa-file-alt feature-icon"></i>
+            <h5>文章管理</h5>
+            <p class="text-muted">创建、编辑、删除文章，管理文章状态</p>
+            <a href="{{ url_for('admin.articles') }}" class="btn btn-primary">
+                <i class="fas fa-arrow-right me-2"></i>进入管理
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-4">
+        <div class="feature-card text-center">
+            <i class="fas fa-tags feature-icon"></i>
+            <h5>标签管理</h5>
+            <p class="text-muted">创建、编辑标签，设置标签颜色</p>
+            <button class="btn btn-outline-primary" disabled>
+                <i class="fas fa-tools me-2"></i>敬请期待
+            </button>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-4">
+        <div class="feature-card text-center">
+            <i class="fas fa-home feature-icon"></i>
+            <h5>欢迎语编辑</h5>
+            <p class="text-muted">修改首页欢迎语内容和显示方式</p>
+            <button class="btn btn-outline-primary" disabled>
+                <i class="fas fa-tools me-2"></i>敬请期待
+            </button>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-4">
+        <div class="feature-card text-center">
+            <i class="fas fa-image feature-icon"></i>
+            <h5>修改网页背景</h5>
+            <p class="text-muted">上传和设置网站背景图片</p>
+            <button class="btn btn-outline-primary" disabled>
+                <i class="fas fa-tools me-2"></i>敬请期待
+            </button>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-4">
+        <div class="feature-card text-center">
+            <i class="fas fa-key feature-icon"></i>
+            <h5>修改密码</h5>
+            <p class="text-muted">更改管理员账号密码</p>
+            <button class="btn btn-outline-primary" disabled>
+                <i class="fas fa-tools me-2"></i>敬请期待
+            </button>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-4">
+        <div class="feature-card text-center">
+            <i class="fas fa-cog feature-icon"></i>
+            <h5>系统设置</h5>
+            <p class="text-muted">其他系统配置选项</p>
+            <button class="btn btn-outline-primary" disabled>
+                <i class="fas fa-tools me-2"></i>敬请期待
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %} 

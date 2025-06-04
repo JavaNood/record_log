@@ -1,0 +1,769 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - 我的个人博客{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline-container {
+    position: relative;
+}
+
+.timeline-nav {
+    position: sticky;
+    top: 20px;
+    height: 400px;
+    overflow-y: auto;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+}
+
+.timeline-nav::-webkit-scrollbar {
+    width: 6px;
+}
+
+.timeline-nav::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+}
+
+.timeline-nav::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 25px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.timeline-item:hover {
+    transform: translateX(5px);
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 8px;
+    height: 8px;
+    background: #007bff;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #007bff;
+}
+
+.timeline-item.active::before {
+    background: #ffc107;
+    box-shadow: 0 0 0 2px #ffc107;
+}
+
+.timeline-item::after {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 16px;
+    width: 2px;
+    height: calc(100% + 15px);
+    background: linear-gradient(to bottom, #007bff, transparent);
+}
+
+.timeline-item:last-child::after {
+    display: none;
+}
+
+.timeline-date {
+    font-size: 0.75rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.timeline-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 2px 0;
+    line-height: 1.3;
+}
+
+.article-card {
+    scroll-margin-top: 100px;
+    transition: all 0.3s ease;
+}
+
+.article-card.highlighted {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 123, 255, 0.15);
+    border-left: 4px solid #007bff;
+}
+
+/* 筛选按钮样式 */
+.tag-filter-group, .permission-filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.tag-filter-btn, .permission-filter-btn {
+    margin-bottom: 5px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+}
+
+.tag-filter-btn:hover, .permission-filter-btn:hover {
+    transform: translateY(-1px);
+}
+
+.tag-filter-btn.active, .permission-filter-btn.active {
+    transform: scale(1.05);
+}
+
+/* 搜索状态样式 */
+.alert-sm {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.hot-article-item:hover {
+    background-color: rgba(0,123,255,0.1) !important;
+}
+
+/* 文章标题链接样式 */
+.article-title-link {
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.article-title-link:hover {
+    color: #007bff !important;
+    text-decoration: none !important;
+}
+
+.article-title-link::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: -2px;
+    left: 0;
+    background-color: #007bff;
+    transition: width 0.3s ease;
+}
+
+.article-title-link:hover::after {
+    width: 100%;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 欢迎语区域 -->
+<div class="welcome-section">
+    <h1 class="welcome-title">欢迎来到我的个人博客</h1>
+    <p class="welcome-subtitle text-muted">记录生活，分享想法，探索世界</p>
+</div>
+
+<div class="row">
+    <!-- 左侧时间线导航 -->
+    <div class="col-lg-3">
+        <div class="timeline-nav">
+            <h6 class="mb-3 text-center">
+                <i class="fas fa-clock"></i> 文章时间线
+            </h6>
+            
+            <!-- 时间范围筛选器 -->
+            <div class="mb-3">
+                <select class="form-select form-select-sm" id="timeRangeFilter">
+                    <option value="all" {{ 'selected' if time_range == 'all' else '' }}>全部时间</option>
+                    <option value="week" {{ 'selected' if time_range == 'week' else '' }}>最近一周</option>
+                    <option value="month" {{ 'selected' if time_range == 'month' else '' }}>最近一个月</option>
+                    <option value="quarter" {{ 'selected' if time_range == 'quarter' else '' }}>最近三个月</option>
+                    <option value="year" {{ 'selected' if time_range == 'year' else '' }}>最近一年</option>
+                    <option value="custom" {{ 'selected' if time_range == 'custom' else '' }}>自定义日期</option>
+                </select>
+                
+                <!-- 自定义日期输入框 -->
+                <div class="mt-2" id="customDateInput" style="{{ 'display: block;' if time_range == 'custom' else 'display: none;' }}">
+                    <input type="text" class="form-control form-control-sm" id="customDate" 
+                           placeholder="YYYY/YYYYMM/YYYYMMDD" 
+                           value="{{ custom_date if custom_date else '' }}"
+                           maxlength="8">
+                    <small class="text-muted">
+                        格式：2024、202412、20241204
+                    </small>
+                </div>
+            </div>
+            
+            {% if articles and articles.items %}
+                {% for article in articles.items %}
+                <div class="timeline-item" data-article-id="article-{{ article.id }}">
+                    <div class="timeline-date">
+                        {{ article.created_at.strftime('%m月%d日') }}
+                    </div>
+                    <div class="timeline-title">
+                        {% if article.is_top %}
+                            <i class="fas fa-thumbtack text-warning me-1"></i>
+                        {% endif %}
+                        {% if article.permission == 'verify' %}
+                            <i class="fas fa-lock text-secondary me-1"></i>
+                        {% endif %}
+                        <a href="{{ url_for('frontend.article_detail', article_id=article.id) }}" 
+                           class="text-decoration-none text-dark article-title-link">
+                            {{ article.title[:20] }}{% if article.title|length > 20 %}...{% endif %}
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center text-muted">
+                    <i class="fas fa-file-alt fa-2x mb-2"></i>
+                    <p class="small">{{ '该时间范围内暂无文章' if time_range != 'all' else '暂无文章' }}</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 中间主内容区域 -->
+    <div class="col-lg-6">
+        <!-- 文章列表区域 -->
+        {% if articles and articles.items %}
+            {% for article in articles.items %}
+            <div class="card mb-4 article-card" id="article-{{ article.id }}">
+                <div class="card-body">
+                    <!-- 文章标题和置顶标识 -->
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title mb-0">
+                            {% if article.is_top %}
+                                <span class="badge bg-warning text-dark me-2">
+                                    <i class="fas fa-thumbtack"></i> 置顶
+                                </span>
+                            {% endif %}
+                            <a href="{{ url_for('frontend.article_detail', article_id=article.id) }}" 
+                               class="text-decoration-none text-dark article-title-link">
+                                {{ article.title }}
+                            </a>
+                        </h5>
+                        <!-- 文章权限标识 -->
+                        {% if article.permission == 'verify' %}
+                            <span class="badge bg-secondary">
+                                <i class="fas fa-lock"></i> 需要验证
+                            </span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- 文章信息 -->
+                    <div class="text-muted small mb-3">
+                        <i class="fas fa-calendar-alt"></i> 发布于 {{ article.created_at.strftime('%Y年%m月%d日') }}
+                        <span class="mx-2">|</span>
+                        <i class="fas fa-eye"></i> 浏览 {{ article.view_count }} 次
+                        {% if article.tags %}
+                            <span class="mx-2">|</span>
+                            <i class="fas fa-tags"></i>
+                            {% for tag in article.tags %}
+                                <span class="badge me-1" style="background-color: {{ tag.color }}; color: white;">{{ tag.name }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <!-- 文章摘要 -->
+                    {% if article.permission == 'verify' and not (article.id | is_verified) %}
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            <strong>这篇文章需要验证后才能查看</strong>
+                            <p class="mb-0 mt-2 small text-muted">点击文章标题进行身份验证以查看完整内容</p>
+                        </div>
+                    {% elif article.content %}
+                        <p class="card-text text-muted">
+                            {{ article.content | preview(2) }}
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- 分页导航 -->
+            {% if articles.pages > 1 %}
+            <nav aria-label="文章分页">
+                <ul class="pagination justify-content-center">
+                    {% if articles.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('frontend.index', page=articles.prev_num) }}" aria-label="上一页">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for page_num in articles.iter_pages() %}
+                        {% if page_num %}
+                            {% if page_num != articles.page %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('frontend.index', page=page_num) }}">{{ page_num }}</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">…</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if articles.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('frontend.index', page=articles.next_num) }}" aria-label="下一页">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        {% else %}
+            <!-- 无文章提示 -->
+            <div class="card text-center">
+                <div class="card-body py-5">
+                    {% if search_query %}
+                        <!-- 搜索无结果 -->
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h5>没有找到相关文章</h5>
+                        <p class="text-muted">没有找到包含 "{{ search_query }}" 的文章</p>
+                        <div class="mt-3">
+                            <a href="{{ url_for('frontend.index') }}" class="btn btn-primary">
+                                <i class="fas fa-home"></i> 查看全部文章
+                            </a>
+                            <button class="btn btn-outline-secondary ms-2" onclick="document.querySelector('input[name=q]').value=''; document.querySelector('input[name=q]').focus();">
+                                <i class="fas fa-edit"></i> 修改搜索
+                            </button>
+                        </div>
+                    {% elif tag_filter or permission_filter != 'all' or time_range != 'all' %}
+                        <!-- 筛选无结果 -->
+                        <i class="fas fa-filter fa-3x text-muted mb-3"></i>
+                        <h5>当前筛选条件下暂无文章</h5>
+                        <p class="text-muted">
+                            {% if tag_filter %}标签: {{ tag_filter }} | {% endif %}
+                            {% if permission_filter != 'all' %}权限: {{ permission_filter }} | {% endif %}
+                            {% if time_range != 'all' %}时间: {{ time_range }}{% endif %}
+                        </p>
+                        <a href="{{ url_for('frontend.index') }}" class="btn btn-primary">
+                            <i class="fas fa-refresh"></i> 清除所有筛选
+                        </a>
+                    {% else %}
+                        <!-- 真正无文章 -->
+                        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                        <h5>暂无文章</h5>
+                        <p class="text-muted">还没有发布任何文章，敬请期待！</p>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- 右侧边栏 -->
+    <div class="col-lg-3">
+        <!-- 搜索框 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-search"></i> 搜索文章</h6>
+            </div>
+            <div class="card-body">
+                <!-- 当前搜索状态显示 -->
+                {% if search_query %}
+                <div class="alert alert-info alert-sm mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small>搜索: "{{ search_query }}"</small>
+                        <a href="{{ url_for('frontend.index') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-times"></i> 清除
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <form method="GET" action="{{ url_for('frontend.search') }}">
+                    <!-- 保持当前筛选状态 -->
+                    {% if time_range != 'all' %}
+                        <input type="hidden" name="range" value="{{ time_range }}">
+                    {% endif %}
+                    {% if custom_date %}
+                        <input type="hidden" name="date" value="{{ custom_date }}">
+                    {% endif %}
+                    {% if tag_filter %}
+                        <input type="hidden" name="tag" value="{{ tag_filter }}">
+                    {% endif %}
+                    {% if permission_filter != 'all' %}
+                        <input type="hidden" name="permission" value="{{ permission_filter }}">
+                    {% endif %}
+                    
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="q" 
+                               placeholder="输入文章标题..." 
+                               value="{{ search_query or '' }}"
+                               maxlength="100">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- 标签筛选 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-tags"></i> 标签筛选</h6>
+            </div>
+            <div class="card-body">
+                <div class="tag-filter-group">
+                    <button class="btn btn-outline-secondary btn-sm tag-filter-btn {{ 'active' if not tag_filter else '' }}" 
+                            data-tag="">
+                        全部标签
+                    </button>
+                    {% for tag in all_tags %}
+                    <button class="btn btn-outline-secondary btn-sm tag-filter-btn {{ 'active' if tag_filter == tag.name else '' }}" 
+                            data-tag="{{ tag.name }}"
+                            style="border-color: {{ tag.color }}; {{ 'background-color: ' + tag.color + '; color: white;' if tag_filter == tag.name else '' }}">
+                        {{ tag.name }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- 权限筛选 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-shield-alt"></i> 权限筛选</h6>
+            </div>
+            <div class="card-body">
+                <div class="permission-filter-group">
+                    <button class="btn btn-outline-secondary btn-sm permission-filter-btn {{ 'active' if permission_filter == 'all' else '' }}" 
+                            data-permission="all">
+                        <i class="fas fa-globe"></i> 全部文章
+                    </button>
+                    <button class="btn btn-outline-success btn-sm permission-filter-btn {{ 'active' if permission_filter == 'public' else '' }}" 
+                            data-permission="public">
+                        <i class="fas fa-unlock"></i> 公开文章
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm permission-filter-btn {{ 'active' if permission_filter == 'verify' else '' }}" 
+                            data-permission="verify">
+                        <i class="fas fa-lock"></i> 需要验证
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Top文章 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-fire"></i> 热门文章</h6>
+            </div>
+            <div class="card-body">
+                {% if top_articles %}
+                    {% for article in top_articles %}
+                    <div class="d-flex align-items-start mb-3 hot-article-item" 
+                         data-article-id="article-{{ article.id }}"
+                         style="cursor: pointer; border-radius: 8px; padding: 8px; transition: all 0.3s ease;"
+                         onmouseover="this.style.backgroundColor='rgba(0,123,255,0.1)'"
+                         onmouseout="this.style.backgroundColor='transparent'">
+                        <div class="flex-shrink-0">
+                            <span class="badge bg-danger">{{ loop.index }}</span>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-1 small">
+                                {{ article.title[:30] }}{% if article.title|length > 30 %}...{% endif %}
+                            </h6>
+                            <small class="text-muted">
+                                <i class="fas fa-eye"></i> {{ article.view_count }} 次浏览
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted small text-center">暂无热门文章</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 博客统计 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-line"></i> 博客统计</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h6 class="text-primary mb-1">{{ articles.total if articles else 0 }}</h6>
+                            <small class="text-muted">文章总数</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="text-success mb-1">
+                            {% set total_views = 0 %}
+                            {% if top_articles %}
+                                {% for article in top_articles %}
+                                    {% set total_views = total_views + article.view_count %}
+                                {% endfor %}
+                            {% endif %}
+                            {{ total_views }}
+                        </h6>
+                        <small class="text-muted">热门浏览</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 时间范围筛选功能
+    const timeRangeFilter = document.getElementById('timeRangeFilter');
+    const customDateInput = document.getElementById('customDateInput');
+    const customDateField = document.getElementById('customDate');
+    
+    if (timeRangeFilter) {
+        timeRangeFilter.addEventListener('change', function() {
+            const selectedRange = this.value;
+            
+            // 显示或隐藏自定义日期输入框
+            if (selectedRange === 'custom') {
+                customDateInput.style.display = 'block';
+                customDateField.focus();
+            } else {
+                customDateInput.style.display = 'none';
+                // 非自定义选项直接跳转
+                applyTimeFilter(selectedRange, '');
+            }
+        });
+    }
+    
+    // 自定义日期输入处理
+    if (customDateField) {
+        // 限制只能输入数字
+        customDateField.addEventListener('input', function() {
+            this.value = this.value.replace(/[^\d]/g, '');
+        });
+        
+        // 回车键应用筛选
+        customDateField.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                applyCustomDateFilter();
+            }
+        });
+        
+        // 失去焦点时应用筛选
+        customDateField.addEventListener('blur', function() {
+            if (this.value.trim()) {
+                applyCustomDateFilter();
+            }
+        });
+    }
+    
+    function applyTimeFilter(range, date) {
+        const currentUrl = new URL(window.location);
+        
+        if (range === 'all') {
+            currentUrl.searchParams.delete('range');
+            currentUrl.searchParams.delete('date');
+        } else if (range === 'custom') {
+            currentUrl.searchParams.set('range', 'custom');
+            if (date) {
+                currentUrl.searchParams.set('date', date);
+            }
+        } else {
+            currentUrl.searchParams.set('range', range);
+            currentUrl.searchParams.delete('date');
+        }
+        
+        // 重置页码
+        currentUrl.searchParams.delete('page');
+        
+        // 跳转到新URL
+        window.location.href = currentUrl.toString();
+    }
+    
+    function applyCustomDateFilter() {
+        const dateValue = customDateField.value.trim();
+        if (dateValue && isValidDateFormat(dateValue)) {
+            applyTimeFilter('custom', dateValue);
+        }
+    }
+    
+    function isValidDateFormat(dateStr) {
+        if (!dateStr) return false;
+        
+        // 验证日期格式
+        if (dateStr.length === 4) {  // YYYY
+            return /^\d{4}$/.test(dateStr) && parseInt(dateStr) >= 1900 && parseInt(dateStr) <= 2100;
+        } else if (dateStr.length === 6) {  // YYYYMM
+            if (!/^\d{6}$/.test(dateStr)) return false;
+            const month = parseInt(dateStr.substr(4, 2));
+            return month >= 1 && month <= 12;
+        } else if (dateStr.length === 8) {  // YYYYMMDD
+            if (!/^\d{8}$/.test(dateStr)) return false;
+            const month = parseInt(dateStr.substr(4, 2));
+            const day = parseInt(dateStr.substr(6, 2));
+            return month >= 1 && month <= 12 && day >= 1 && day <= 31;
+        }
+        
+        return false;
+    }
+    
+    // 时间线导航功能
+    const timelineItems = document.querySelectorAll('.timeline-item');
+    const articleCards = document.querySelectorAll('.article-card');
+    
+    // 时间线点击跳转功能
+    timelineItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-article-id');
+            const targetElement = document.getElementById(targetId);
+            
+            if (targetElement) {
+                // 移除所有活动状态
+                timelineItems.forEach(ti => ti.classList.remove('active'));
+                articleCards.forEach(ac => ac.classList.remove('highlighted'));
+                
+                // 添加活动状态
+                this.classList.add('active');
+                targetElement.classList.add('highlighted');
+                
+                // 平滑滚动到目标文章
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+                
+                // 3秒后移除高亮
+                setTimeout(() => {
+                    targetElement.classList.remove('highlighted');
+                }, 3000);
+            }
+        });
+    });
+    
+    // 滚动时更新时间线活动状态
+    let ticking = false;
+    function updateTimelineOnScroll() {
+        if (!ticking) {
+            requestAnimationFrame(() => {
+                const scrollPosition = window.scrollY + 150;
+                
+                articleCards.forEach((card, index) => {
+                    const cardTop = card.offsetTop;
+                    const cardBottom = cardTop + card.offsetHeight;
+                    
+                    if (scrollPosition >= cardTop && scrollPosition <= cardBottom) {
+                        // 移除所有活动状态
+                        timelineItems.forEach(ti => ti.classList.remove('active'));
+                        
+                        // 添加当前文章对应的时间线活动状态
+                        if (timelineItems[index]) {
+                            timelineItems[index].classList.add('active');
+                        }
+                    }
+                });
+                
+                ticking = false;
+            });
+            ticking = true;
+        }
+    }
+    
+    window.addEventListener('scroll', updateTimelineOnScroll);
+    
+    // 标签筛选功能
+    const tagFilterBtns = document.querySelectorAll('.tag-filter-btn');
+    tagFilterBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tagValue = this.getAttribute('data-tag');
+            applyFilter('tag', tagValue);
+        });
+    });
+    
+    // 权限筛选功能
+    const permissionFilterBtns = document.querySelectorAll('.permission-filter-btn');
+    permissionFilterBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const permissionValue = this.getAttribute('data-permission');
+            applyFilter('permission', permissionValue);
+        });
+    });
+    
+    // 热门文章点击跳转功能
+    const hotArticleItems = document.querySelectorAll('.hot-article-item');
+    hotArticleItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-article-id');
+            const targetElement = document.getElementById(targetId);
+            
+            if (targetElement) {
+                // 移除所有活动状态
+                timelineItems.forEach(ti => ti.classList.remove('active'));
+                articleCards.forEach(ac => ac.classList.remove('highlighted'));
+                
+                // 添加活动状态
+                targetElement.classList.add('highlighted');
+                
+                // 找到对应的时间线项目并激活
+                timelineItems.forEach(timelineItem => {
+                    if (timelineItem.getAttribute('data-article-id') === targetId) {
+                        timelineItem.classList.add('active');
+                    }
+                });
+                
+                // 平滑滚动到目标文章
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+                
+                // 3秒后移除高亮
+                setTimeout(() => {
+                    targetElement.classList.remove('highlighted');
+                }, 3000);
+            } else {
+                // 如果当前页面没有这篇文章，跳转到首页并定位
+                window.location.href = `{{ url_for('frontend.index') }}#${targetId}`;
+            }
+        });
+    });
+    
+    function applyFilter(filterType, filterValue) {
+        const currentUrl = new URL(window.location);
+        
+        if (filterType === 'tag') {
+            if (filterValue === '' || filterValue === null) {
+                currentUrl.searchParams.delete('tag');
+            } else {
+                currentUrl.searchParams.set('tag', filterValue);
+            }
+        } else if (filterType === 'permission') {
+            if (filterValue === 'all') {
+                currentUrl.searchParams.delete('permission');
+            } else {
+                currentUrl.searchParams.set('permission', filterValue);
+            }
+        }
+        
+        // 重置页码
+        currentUrl.searchParams.delete('page');
+        
+        // 跳转到新URL
+        window.location.href = currentUrl.toString();
+    }
+});
+</script>
+{% endblock %} 

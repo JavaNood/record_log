@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+
+{% block title %}文章验证 - {{ article.title }} - 我的个人博客{% endblock %}
+
+{% block extra_css %}
+<style>
+/* 验证页面样式 */
+.verify-container {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 0;
+}
+
+.verify-card {
+    max-width: 500px;
+    width: 100%;
+    margin: 0 auto;
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+}
+
+.verify-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    text-align: center;
+}
+
+.verify-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.verify-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.verify-subtitle {
+    opacity: 0.9;
+    font-size: 0.95rem;
+}
+
+.verify-body {
+    padding: 2rem;
+}
+
+.article-info {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.article-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.article-meta {
+    color: #6c757d;
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.question-section {
+    margin-bottom: 2rem;
+}
+
+.question-label {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.question-text {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    color: #495057;
+    line-height: 1.6;
+}
+
+.answer-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background-color: white;
+}
+
+.answer-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.verify-btn {
+    width: 100%;
+    padding: 0.875rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 1rem;
+}
+
+.verify-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.verify-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.back-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background: transparent;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.back-btn:hover {
+    background-color: #f8f9fa;
+    border-color: #adb5bd;
+    color: #495057;
+    text-decoration: none;
+}
+
+.alert {
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: none;
+}
+
+.loading-spinner {
+    display: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 0.5rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* 响应式设计 */
+@media (max-width: 576px) {
+    .verify-container {
+        padding: 1rem;
+    }
+    
+    .verify-card {
+        margin: 0 1rem;
+    }
+    
+    .verify-header {
+        padding: 1.5rem;
+    }
+    
+    .verify-body {
+        padding: 1.5rem;
+    }
+    
+    .verify-icon {
+        font-size: 2.5rem;
+    }
+    
+    .verify-title {
+        font-size: 1.3rem;
+    }
+    
+    .article-meta {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="verify-container">
+    <div class="verify-card">
+        <!-- 验证头部 -->
+        <div class="verify-header">
+            <i class="fas fa-shield-alt verify-icon"></i>
+            <h1 class="verify-title">文章访问验证</h1>
+            <p class="verify-subtitle">这篇文章需要验证后才能查看</p>
+        </div>
+        
+        <!-- 验证内容 -->
+        <div class="verify-body">
+            <!-- 文章信息 -->
+            <div class="article-info">
+                <h2 class="article-title">{{ article.title }}</h2>
+                <div class="article-meta">
+                    <span><i class="fas fa-calendar-alt"></i> {{ article.created_at.strftime('%Y年%m月%d日') }}</span>
+                    <span><i class="fas fa-eye"></i> {{ article.view_count }} 次浏览</span>
+                    {% if article.tags %}
+                        <span>
+                            {% for tag in article.tags %}
+                                <span class="badge me-1" style="background-color: {{ tag.color }}; color: white; font-size: 0.75rem;">
+                                    {{ tag.name }}
+                                </span>
+                            {% endfor %}
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- 验证表单 -->
+            <form id="verifyForm">
+                <div class="question-section">
+                    <label class="question-label">
+                        <i class="fas fa-question-circle"></i> 验证问题：
+                    </label>
+                    <div class="question-text">
+                        {{ article.verify_question or '请输入验证答案以继续阅读此文章。' }}
+                    </div>
+                    
+                    <input type="text" 
+                           class="answer-input" 
+                           id="answerInput" 
+                           placeholder="请输入答案..." 
+                           required
+                           autocomplete="off">
+                </div>
+                
+                <!-- 错误提示 -->
+                <div id="errorAlert" class="alert alert-danger" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span id="errorMessage"></span>
+                </div>
+                
+                <!-- 成功提示 -->
+                <div id="successAlert" class="alert alert-success" style="display: none;">
+                    <i class="fas fa-check-circle"></i>
+                    验证成功！正在加载文章内容...
+                </div>
+                
+                <button type="submit" class="verify-btn" id="verifyBtn">
+                    <span class="loading-spinner" id="loadingSpinner"></span>
+                    <i class="fas fa-unlock"></i> 验证并查看文章
+                </button>
+                
+                <a href="{{ url_for('frontend.index') }}" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> 返回首页
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const verifyForm = document.getElementById('verifyForm');
+    const answerInput = document.getElementById('answerInput');
+    const verifyBtn = document.getElementById('verifyBtn');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const errorAlert = document.getElementById('errorAlert');
+    const successAlert = document.getElementById('successAlert');
+    const errorMessage = document.getElementById('errorMessage');
+    
+    // 自动聚焦到输入框
+    answerInput.focus();
+    
+    // 表单提交处理
+    verifyForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const answer = answerInput.value.trim();
+        if (!answer) {
+            showError('请输入答案');
+            return;
+        }
+        
+        // 开始验证
+        startVerification();
+        
+        // 发送验证请求
+        fetch('{{ url_for("frontend.verify_article") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                article_id: {{ article.id }},
+                answer: answer
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSuccess();
+                // 验证成功，3秒后跳转到文章页面
+                setTimeout(() => {
+                    window.location.href = '{{ url_for("frontend.article_detail", article_id=article.id) }}';
+                }, 1500);
+            } else {
+                showError(data.message || '验证失败，请重试');
+                endVerification();
+            }
+        })
+        .catch(error => {
+            console.error('验证请求失败:', error);
+            showError('网络错误，请稍后重试');
+            endVerification();
+        });
+    });
+    
+    // 开始验证状态
+    function startVerification() {
+        verifyBtn.disabled = true;
+        loadingSpinner.style.display = 'inline-block';
+        hideAlerts();
+    }
+    
+    // 结束验证状态
+    function endVerification() {
+        verifyBtn.disabled = false;
+        loadingSpinner.style.display = 'none';
+    }
+    
+    // 显示错误信息
+    function showError(message) {
+        errorMessage.textContent = message;
+        errorAlert.style.display = 'block';
+        successAlert.style.display = 'none';
+        
+        // 聚焦到输入框并选中文本
+        answerInput.focus();
+        answerInput.select();
+    }
+    
+    // 显示成功信息
+    function showSuccess() {
+        successAlert.style.display = 'block';
+        errorAlert.style.display = 'none';
+    }
+    
+    // 隐藏所有提示
+    function hideAlerts() {
+        errorAlert.style.display = 'none';
+        successAlert.style.display = 'none';
+    }
+    
+    // 输入框变化时隐藏错误提示
+    answerInput.addEventListener('input', function() {
+        if (errorAlert.style.display === 'block') {
+            hideAlerts();
+        }
+    });
+    
+    // 回车键提交
+    answerInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            verifyForm.dispatchEvent(new Event('submit'));
+        }
+    });
+});
+</script>
+{% endblock %} 

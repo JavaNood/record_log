@@ -1,0 +1,1220 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{% if is_new %}新建文章{% else %}编辑文章{% endif %}{% endblock %}
+{% block page_title %}{% if is_new %}新建文章{% else %}编辑文章{% endif %}{% endblock %}
+{% block page_subtitle %}{% if is_new %}创建新的文章内容{% else %}修改文章内容和设置{% endif %}{% endblock %}
+
+{% block content %}
+<div class="admin-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0">
+            <i class="fas fa-{% if is_new %}plus{% else %}edit{% endif %} me-2"></i>{% if is_new %}新建文章{% else %}编辑文章{% endif %}
+        </h4>
+        <div>
+            <a href="{{ url_for('admin.articles') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>返回列表
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" id="articleEditForm" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+        
+        <!-- 文章标题 -->
+        <div class="mb-4">
+            {{ form.title.label(class="form-label fw-bold") }}
+            {{ form.title() }}
+            {% if form.title.errors %}
+                <div class="text-danger small mt-1">
+                    {% for error in form.title.errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Markdown编辑器区域 -->
+        <div class="mb-4">
+            {{ form.content.label(class="form-label fw-bold") }}
+            <div class="markdown-editor-container">
+                <div class="editor-toolbar mb-2">
+                    <div class="btn-group btn-group-sm me-2" role="group">
+                        <button type="button" class="btn btn-outline-secondary" onclick="insertMarkdown('**', '**', '粗体文字')" title="粗体">
+                            <i class="fas fa-bold"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="insertMarkdown('*', '*', '斜体文字')" title="斜体">
+                            <i class="fas fa-italic"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="insertMarkdown('`', '`', '代码')" title="代码">
+                            <i class="fas fa-code"></i>
+                        </button>
+                    </div>
+                    <div class="btn-group btn-group-sm me-2" role="group">
+                        <button type="button" class="btn btn-outline-secondary" onclick="insertMarkdown('# ', '', '一级标题')" title="标题">
+                            <i class="fas fa-heading"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="insertMarkdown('- ', '', '列表项')" title="列表">
+                            <i class="fas fa-list"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="insertMarkdown('[', '](https://)', '链接文字')" title="链接">
+                            <i class="fas fa-link"></i>
+                        </button>
+                    </div>
+                    <div class="btn-group btn-group-sm me-2" role="group">
+                        <button type="button" class="btn btn-outline-secondary" onclick="insertImage()" title="插入图片">
+                            <i class="fas fa-image"></i>
+                        </button>
+                        <input type="file" id="imageUpload" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" title="图片选项">
+                                <span class="visually-hidden">切换下拉菜单</span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><button class="dropdown-item" type="button" onclick="insertImageWithSize('small')">
+                                    <i class="fas fa-compress-alt me-2"></i>小图 (25%)
+                                </button></li>
+                                <li><button class="dropdown-item" type="button" onclick="insertImageWithSize('medium')">
+                                    <i class="fas fa-expand-arrows-alt me-2"></i>中图 (50%)
+                                </button></li>
+                                <li><button class="dropdown-item" type="button" onclick="insertImageWithSize('large')">
+                                    <i class="fas fa-expand me-2"></i>大图 (75%)
+                                </button></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><button class="dropdown-item" type="button" onclick="insertImageWithAlign('left')">
+                                    <i class="fas fa-align-left me-2"></i>左对齐
+                                </button></li>
+                                <li><button class="dropdown-item" type="button" onclick="insertImageWithAlign('center')">
+                                    <i class="fas fa-align-center me-2"></i>居中对齐
+                                </button></li>
+                                <li><button class="dropdown-item" type="button" onclick="insertImageWithAlign('right')">
+                                    <i class="fas fa-align-right me-2"></i>右对齐
+                                </button></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><button class="dropdown-item" type="button" onclick="insertImageInline()">
+                                    <i class="fas fa-grip-horizontal me-2"></i>并排插入
+                                </button></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-info" onclick="togglePreview()" id="previewToggle">
+                            <i class="fas fa-eye"></i> 预览
+                        </button>
+                        <button type="button" class="btn btn-outline-warning" onclick="testMarkdown()" title="插入测试内容">
+                            <i class="fas fa-vial"></i> 测试
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="editor-content-wrapper">
+                    <div id="editor-input" class="editor-pane">
+                        {{ form.content() }}
+                    </div>
+                    <div id="editor-preview" class="editor-pane preview-pane" style="display: none;">
+                        <div id="previewContent" class="preview-content">
+                            <!-- 实时预览内容 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-text">支持Markdown格式，可以使用工具栏快速插入格式或直接输入Markdown语法</div>
+            {% if form.content.errors %}
+                <div class="text-danger small mt-1">
+                    {% for error in form.content.errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- 设置区域 -->
+        <div class="row mb-4">
+            <!-- 文章权限 -->
+            <div class="col-md-3 mb-3">
+                {{ form.permission.label(class="form-label fw-bold") }}
+                {{ form.permission() }}
+            </div>
+
+            <!-- 发布状态 -->
+            <div class="col-md-3 mb-3">
+                {{ form.status.label(class="form-label fw-bold") }}
+                {{ form.status() }}
+            </div>
+
+            <!-- 自定义浏览数 -->
+            <div class="col-md-3 mb-3">
+                {{ form.view_count.label(class="form-label fw-bold") }}
+                {{ form.view_count() }}
+                <div class="form-text">自定义文章浏览数</div>
+                {% if form.view_count.errors %}
+                    <div class="text-danger small mt-1">
+                        {% for error in form.view_count.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- 置顶设置 -->
+            <div class="col-md-3 mb-3">
+                <label class="form-label fw-bold d-block">其他设置</label>
+                <div class="form-check">
+                    {{ form.is_top() }}
+                    {{ form.is_top.label(class="form-check-label") }}
+                </div>
+            </div>
+        </div>
+
+        <!-- 验证设置区域 -->
+        <div id="verificationSection" class="mb-4" style="display: none;">
+            <h6 class="fw-bold text-warning">
+                <i class="fas fa-lock me-2"></i>访问验证设置
+            </h6>
+            <div class="alert alert-info mb-3">
+                <i class="fas fa-info-circle me-2"></i>
+                当文章权限设为"需要验证"时，用户需要回答正确的验证问题才能查看文章内容。
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    {{ form.verify_question.label(class="form-label fw-bold") }}
+                    {{ form.verify_question() }}
+                    {% if form.verify_question.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in form.verify_question.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    {{ form.verify_answer.label(class="form-label fw-bold") }}
+                    {{ form.verify_answer() }}
+                    {% if form.verify_answer.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in form.verify_answer.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="text-muted">
+                <i class="fas fa-info-circle me-1"></i>
+                {% if not is_new %}
+                    文章ID: {{ article.id }} | 
+                    创建时间: {{ article.created_at.strftime('%Y-%m-%d %H:%M') }} | 
+                    最后更新: {{ article.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                {% else %}
+                    使用 Ctrl+S 快速保存，Ctrl+P 快速预览
+                {% endif %}
+            </div>
+            <div>
+                <button type="button" class="btn btn-outline-secondary me-2" onclick="previewArticle()">
+                    <i class="fas fa-eye me-2"></i>预览
+                </button>
+                {{ form.submit() }}
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- 预览模态框 -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-eye me-2"></i>文章预览
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modalPreviewContent">
+                    <!-- 预览内容将在这里显示 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭预览</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Markdown编辑器样式 */
+    .markdown-editor-container {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        overflow: hidden;
+    }
+    
+    .editor-toolbar {
+        background: #f8f9fa;
+        padding: 0.75rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .editor-content-wrapper {
+        display: flex;
+        min-height: 400px;
+    }
+    
+    .editor-pane {
+        flex: 1;
+        padding: 0;
+    }
+    
+    #article-content {
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        line-height: 1.6;
+        resize: none;
+        border: none;
+        outline: none;
+        padding: 1rem;
+        min-height: 400px;
+        width: 100%;
+    }
+    
+    .preview-pane {
+        border-left: 1px solid #dee2e6;
+        background: #f8f9fa;
+    }
+    
+    .preview-content {
+        padding: 1rem;
+        min-height: 400px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    #article-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+    
+    .form-label.fw-bold {
+        color: #495057;
+        margin-bottom: 0.75rem;
+    }
+    
+    .admin-card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    /* 预览区域样式 */
+    #modalPreviewContent, .preview-content {
+        background: white;
+        border-radius: 0.375rem;
+    }
+    
+    .preview-content h1, .preview-content h2, .preview-content h3,
+    #modalPreviewContent h1, #modalPreviewContent h2, #modalPreviewContent h3 {
+        color: #212529;
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .preview-content p, #modalPreviewContent p {
+        line-height: 1.8;
+        margin-bottom: 1rem;
+    }
+    
+    .preview-content code, #modalPreviewContent code {
+        background: #e9ecef;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+        font-size: 0.875em;
+    }
+    
+    .preview-content pre, #modalPreviewContent pre {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        overflow-x: auto;
+    }
+    
+    .preview-content blockquote, #modalPreviewContent blockquote {
+        border-left: 4px solid #dee2e6;
+        padding-left: 1rem;
+        margin: 1rem 0;
+        color: #6c757d;
+    }
+    
+    /* 验证设置区域 */
+    #verificationSection {
+        background: #fffbf0;
+        border: 1px solid #ffeaa7;
+        border-radius: 0.375rem;
+        padding: 1.5rem;
+    }
+    
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+        .modal-dialog.modal-xl {
+            margin: 0.5rem;
+            max-width: calc(100% - 1rem);
+        }
+        
+        .editor-content-wrapper {
+            flex-direction: column;
+        }
+        
+        .preview-pane {
+            border-left: none;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        #article-content {
+            min-height: 300px;
+        }
+    }
+</style>
+
+<!-- 引入Markdown解析库 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+{% endblock %}
+
+{% block extra_js %}
+<!-- Markdown解析和语法高亮 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/5.1.1/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('articleEditForm');
+    const submitBtn = document.getElementById('submit-btn');
+    const titleField = document.getElementById('article-title');
+    const contentField = document.getElementById('article-content');
+    const permissionField = document.getElementById('article-permission');
+    const verificationSection = document.getElementById('verificationSection');
+    const previewContent = document.getElementById('previewContent');
+    
+    let isPreviewMode = false;
+    
+    // 等待marked库加载完成后配置
+    function initializeMarked() {
+        if (typeof marked !== 'undefined') {
+            // 配置marked解析器
+            marked.setOptions({
+                highlight: function(code, lang) {
+                    if (typeof hljs !== 'undefined' && lang && hljs.getLanguage(lang)) {
+                        try {
+                            return hljs.highlight(code, { language: lang }).value;
+                        } catch (err) {
+                            console.log('Highlight error:', err);
+                        }
+                    }
+                    return typeof hljs !== 'undefined' ? hljs.highlightAuto(code).value : code;
+                },
+                breaks: true,
+                gfm: true,
+                headerIds: false,
+                mangle: false
+            });
+            console.log('Marked初始化成功');
+        } else {
+            console.error('Marked库未加载');
+        }
+    }
+    
+    // 延迟初始化，确保库加载完成
+    setTimeout(initializeMarked, 500);
+    
+    // 权限变更处理 - 修复显示问题
+    function toggleVerificationSection() {
+        console.log('权限变更:', permissionField.value);
+        if (permissionField.value === 'verify') {
+            verificationSection.style.display = 'block';
+            console.log('显示验证设置区域');
+        } else {
+            verificationSection.style.display = 'none';
+            console.log('隐藏验证设置区域');
+        }
+    }
+    
+    // 确保权限字段存在并绑定事件
+    if (permissionField) {
+        permissionField.addEventListener('change', toggleVerificationSection);
+        // 页面加载时立即检查权限状态
+        toggleVerificationSection();
+    } else {
+        console.error('权限字段未找到');
+    }
+    
+    // 实时预览更新 - 修复markdown渲染
+    function updatePreview() {
+        if (!isPreviewMode || !previewContent) return;
+        
+        const title = titleField.value;
+        const content = contentField.value;
+        
+        let html = '';
+        
+        if (title.trim()) {
+            html += `<h1>${escapeHtml(title)}</h1>`;
+        }
+        
+        if (content.trim()) {
+            try {
+                if (typeof marked !== 'undefined') {
+                    html += marked.parse(content);
+                } else {
+                    // 如果marked没有加载，使用简单的转换
+                    html += simpleMarkdownToHtml(content);
+                }
+            } catch (e) {
+                console.error('Markdown解析错误:', e);
+                html += `<pre>${escapeHtml(content)}</pre>`;
+            }
+        }
+        
+        previewContent.innerHTML = html || '<p class="text-muted">暂无内容</p>';
+        console.log('预览已更新');
+    }
+    
+    // 切换预览模式 - 修复预览切换
+    window.togglePreview = function() {
+        const editorInput = document.getElementById('editor-input');
+        const editorPreview = document.getElementById('editor-preview');
+        const toggleBtn = document.getElementById('previewToggle');
+        
+        if (!editorInput || !editorPreview || !toggleBtn) {
+            console.error('预览元素未找到');
+            return;
+        }
+        
+        isPreviewMode = !isPreviewMode;
+        
+        if (isPreviewMode) {
+            editorInput.style.display = 'none';
+            editorPreview.style.display = 'block';
+            toggleBtn.innerHTML = '<i class="fas fa-edit"></i> 编辑';
+            updatePreview();
+            console.log('切换到预览模式');
+        } else {
+            editorInput.style.display = 'block';
+            editorPreview.style.display = 'none';
+            toggleBtn.innerHTML = '<i class="fas fa-eye"></i> 预览';
+            console.log('切换到编辑模式');
+        }
+    };
+    
+    // Markdown工具栏功能 - 确保功能正常
+    window.insertMarkdown = function(before, after, placeholder) {
+        if (!contentField) {
+            console.error('内容字段未找到');
+            return;
+        }
+        
+        const start = contentField.selectionStart;
+        const end = contentField.selectionEnd;
+        const selectedText = contentField.value.substring(start, end);
+        const replacement = before + (selectedText || placeholder) + after;
+        
+        contentField.value = contentField.value.substring(0, start) + replacement + contentField.value.substring(end);
+        contentField.focus();
+        
+        // 设置光标位置
+        if (selectedText) {
+            contentField.setSelectionRange(start + before.length, start + before.length + selectedText.length);
+        } else {
+            contentField.setSelectionRange(start + before.length, start + before.length + placeholder.length);
+        }
+        
+        updatePreview();
+        console.log('插入markdown:', before + placeholder + after);
+    };
+    
+    // 插入图片
+    window.insertImage = function() {
+        const imageUpload = document.getElementById('imageUpload');
+        if (imageUpload) {
+            imageUpload.click();
+        } else {
+            console.error('图片上传元素未找到');
+        }
+    };
+    
+    // 处理图片上传
+    window.handleImageUpload = function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        if (!file.type.startsWith('image/')) {
+            showMessage('请选择图片文件', 'warning');
+            return;
+        }
+        
+        // 显示上传状态
+        showMessage('正在上传图片...', 'info');
+        
+        // 创建FormData对象
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        // 上传到服务器
+        fetch('/admin/upload-image', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 插入图片markdown
+                const imageMarkdown = `![图片](${data.image_url})`;
+                insertMarkdown('', '', imageMarkdown);
+                showMessage(data.message, 'success');
+            } else {
+                showMessage(data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('图片上传错误:', error);
+            showMessage('图片上传失败，请稍后重试', 'danger');
+        });
+        
+        // 清空文件选择
+        event.target.value = '';
+    };
+    
+    // 插入指定大小的图片
+    window.insertImageWithSize = function(size) {
+        const imageUpload = document.getElementById('imageUpload');
+        if (imageUpload) {
+            // 设置上传完成后的回调
+            imageUpload.onchange = function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                if (!file.type.startsWith('image/')) {
+                    showMessage('请选择图片文件', 'warning');
+                    return;
+                }
+                
+                showMessage('正在上传图片...', 'info');
+                
+                const formData = new FormData();
+                formData.append('image', file);
+                
+                fetch('/admin/upload-image', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        let sizeStyle = '';
+                        switch(size) {
+                            case 'small':
+                                sizeStyle = ' width="25%"';
+                                break;
+                            case 'medium':
+                                sizeStyle = ' width="50%"';
+                                break;
+                            case 'large':
+                                sizeStyle = ' width="75%"';
+                                break;
+                        }
+                        
+                        const imageHtml = `<img src="${data.image_url}" alt="${data.filename}"${sizeStyle} style="border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">`;
+                        insertMarkdown('', '', imageHtml);
+                        showMessage(`已插入${getSizeText(size)}`, 'success');
+                    } else {
+                        showMessage(data.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('图片上传错误:', error);
+                    showMessage('图片上传失败，请稍后重试', 'danger');
+                });
+                
+                event.target.value = '';
+                // 重置回调
+                imageUpload.onchange = handleImageUpload;
+            };
+            imageUpload.click();
+        }
+    };
+    
+    // 插入指定对齐方式的图片
+    window.insertImageWithAlign = function(align) {
+        const imageUpload = document.getElementById('imageUpload');
+        if (imageUpload) {
+            imageUpload.onchange = function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                if (!file.type.startsWith('image/')) {
+                    showMessage('请选择图片文件', 'warning');
+                    return;
+                }
+                
+                showMessage('正在上传图片...', 'info');
+                
+                const formData = new FormData();
+                formData.append('image', file);
+                
+                fetch('/admin/upload-image', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        let alignStyle = '';
+                        let containerStyle = '';
+                        
+                        switch(align) {
+                            case 'left':
+                                alignStyle = 'float: left; margin: 0 1rem 1rem 0;';
+                                break;
+                            case 'center':
+                                containerStyle = 'text-align: center;';
+                                alignStyle = 'display: block; margin: 1rem auto;';
+                                break;
+                            case 'right':
+                                alignStyle = 'float: right; margin: 0 0 1rem 1rem;';
+                                break;
+                        }
+                        
+                        let imageHtml = '';
+                        if (containerStyle) {
+                            imageHtml = `<div style="${containerStyle}"><img src="${data.image_url}" alt="${data.filename}" style="${alignStyle} border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></div>`;
+                        } else {
+                            imageHtml = `<img src="${data.image_url}" alt="${data.filename}" style="${alignStyle} border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">`;
+                        }
+                        
+                        insertMarkdown('', '', imageHtml);
+                        showMessage(`已插入${getAlignText(align)}图片`, 'success');
+                    } else {
+                        showMessage(data.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('图片上传错误:', error);
+                    showMessage('图片上传失败，请稍后重试', 'danger');
+                });
+                
+                event.target.value = '';
+                imageUpload.onchange = handleImageUpload;
+            };
+            imageUpload.click();
+        }
+    };
+    
+    // 插入并排图片
+    window.insertImageInline = function() {
+        showMessage('请先选择第一张图片', 'info');
+        const imageUpload = document.getElementById('imageUpload');
+        let firstImageUrl = null;
+        let firstImageName = null;
+        
+        if (imageUpload) {
+            imageUpload.onchange = function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                if (!file.type.startsWith('image/')) {
+                    showMessage('请选择图片文件', 'warning');
+                    return;
+                }
+                
+                showMessage('正在上传第一张图片...', 'info');
+                
+                const formData = new FormData();
+                formData.append('image', file);
+                
+                fetch('/admin/upload-image', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        firstImageUrl = data.image_url;
+                        firstImageName = data.filename;
+                        showMessage('第一张图片上传成功，请选择第二张图片', 'success');
+                        
+                        // 继续选择第二张图片
+                        imageUpload.onchange = function(event) {
+                            const file = event.target.files[0];
+                            if (!file) return;
+                            
+                            if (!file.type.startsWith('image/')) {
+                                showMessage('请选择图片文件', 'warning');
+                                return;
+                            }
+                            
+                            showMessage('正在上传第二张图片...', 'info');
+                            
+                            const formData = new FormData();
+                            formData.append('image', file);
+                            
+                            fetch('/admin/upload-image', {
+                                method: 'POST',
+                                body: formData
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    // 创建并排图片HTML
+                                    const inlineImagesHtml = `
+<div style="display: flex; gap: 1rem; margin: 1rem 0; justify-content: center; flex-wrap: wrap;">
+    <img src="${firstImageUrl}" alt="${firstImageName}" style="width: 45%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <img src="${data.image_url}" alt="${data.filename}" style="width: 45%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+</div>`;
+                                    insertMarkdown('', '', inlineImagesHtml);
+                                    showMessage('已插入并排图片', 'success');
+                                } else {
+                                    showMessage(data.message, 'danger');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('第二张图片上传错误:', error);
+                                showMessage('第二张图片上传失败', 'danger');
+                            });
+                            
+                            event.target.value = '';
+                            imageUpload.onchange = handleImageUpload;
+                        };
+                        imageUpload.click();
+                    } else {
+                        showMessage(data.message, 'danger');
+                        imageUpload.onchange = handleImageUpload;
+                    }
+                })
+                .catch(error => {
+                    console.error('第一张图片上传错误:', error);
+                    showMessage('第一张图片上传失败', 'danger');
+                    imageUpload.onchange = handleImageUpload;
+                });
+                
+                event.target.value = '';
+            };
+            imageUpload.click();
+        }
+    };
+    
+    // 辅助函数
+    function getSizeText(size) {
+        switch(size) {
+            case 'small': return '小图';
+            case 'medium': return '中图';
+            case 'large': return '大图';
+            default: return '图片';
+        }
+    }
+    
+    function getAlignText(align) {
+        switch(align) {
+            case 'left': return '左对齐';
+            case 'center': return '居中';
+            case 'right': return '右对齐';
+            default: return '';
+        }
+    }
+    
+    // 粘贴图片功能
+    contentField.addEventListener('paste', function(e) {
+        const items = e.clipboardData.items;
+        
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            
+            // 检查是否是图片
+            if (item.type.indexOf('image') !== -1) {
+                e.preventDefault(); // 阻止默认粘贴行为
+                
+                const file = item.getAsFile();
+                if (file) {
+                    showMessage('检测到粘贴图片，正在上传...', 'info');
+                    
+                    // 创建FormData并上传
+                    const formData = new FormData();
+                    formData.append('image', file);
+                    
+                    fetch('/admin/upload-image', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            const imageMarkdown = `![图片](${data.image_url})`;
+                            insertMarkdown('', '', imageMarkdown);
+                            showMessage('粘贴图片上传成功', 'success');
+                        } else {
+                            showMessage(data.message, 'danger');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('粘贴图片上传错误:', error);
+                        showMessage('粘贴图片上传失败', 'danger');
+                    });
+                }
+                break;
+            }
+        }
+    });
+    
+    // 内容变化时更新预览
+    if (contentField) {
+        contentField.addEventListener('input', function() {
+            updatePreview();
+        });
+    }
+    
+    if (titleField) {
+        titleField.addEventListener('input', function() {
+            updatePreview();
+        });
+    }
+    
+    // 表单提交处理
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // 检查验证字段
+            if (permissionField && permissionField.value === 'verify') {
+                const questionField = document.getElementById('verify-question');
+                const answerField = document.getElementById('verify-answer');
+                
+                if (!questionField || !questionField.value.trim()) {
+                    e.preventDefault();
+                    showMessage('权限为需要验证时，验证提示词为必填项', 'danger');
+                    // 确保验证区域显示
+                    toggleVerificationSection();
+                    if (questionField) questionField.focus();
+                    return false;
+                }
+                
+                if (!answerField || !answerField.value.trim()) {
+                    e.preventDefault();
+                    showMessage('权限为需要验证时，验证答案为必填项', 'danger');
+                    // 确保验证区域显示
+                    toggleVerificationSection();
+                    if (answerField) answerField.focus();
+                    return false;
+                }
+            }
+            
+            const originalText = submitBtn.innerHTML;
+            
+            // 显示加载状态
+            submitBtn.innerHTML = '';
+            const spinner = document.createElement('i');
+            spinner.className = 'fas fa-spinner fa-spin me-2';
+            submitBtn.appendChild(spinner);
+            submitBtn.appendChild(document.createTextNode('保存中...'));
+            submitBtn.disabled = true;
+            
+            // 如果表单验证失败，恢复按钮状态
+            setTimeout(() => {
+                if (!form.checkValidity()) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            }, 100);
+        });
+    }
+    
+    // 键盘快捷键
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+S 保存
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            if (form) form.submit();
+        }
+        
+        // Ctrl+P 预览
+        if (e.ctrlKey && e.key === 'p') {
+            e.preventDefault();
+            previewArticle();
+        }
+        
+        // 编辑器快捷键
+        if (contentField && document.activeElement === contentField) {
+            // Ctrl+B 粗体
+            if (e.ctrlKey && e.key === 'b') {
+                e.preventDefault();
+                insertMarkdown('**', '**', '粗体文字');
+            }
+            
+            // Ctrl+I 斜体
+            if (e.ctrlKey && e.key === 'i') {
+                e.preventDefault();
+                insertMarkdown('*', '*', '斜体文字');
+            }
+        }
+    });
+    
+    // 页面加载完成后进行最终检查
+    setTimeout(function() {
+        console.log('页面加载完成，进行最终检查');
+        console.log('权限字段:', permissionField ? permissionField.value : '未找到');
+        console.log('验证区域:', verificationSection ? '已找到' : '未找到');
+        console.log('Marked库:', typeof marked !== 'undefined' ? '已加载' : '未加载');
+        
+        // 确保验证区域正确显示
+        if (permissionField) {
+            toggleVerificationSection();
+        }
+    }, 1000);
+});
+
+// 预览功能 - 修复模态框预览
+function previewArticle() {
+    const title = document.getElementById('article-title');
+    const content = document.getElementById('article-content');
+    const modalPreviewContent = document.getElementById('modalPreviewContent');
+    
+    if (!title || !content || !modalPreviewContent) {
+        console.error('预览元素未找到');
+        return;
+    }
+    
+    const titleValue = title.value;
+    const contentValue = content.value;
+    
+    if (!titleValue.trim() && !contentValue.trim()) {
+        alert('请先输入标题或内容');
+        return;
+    }
+    
+    let html = '';
+    
+    if (titleValue.trim()) {
+        html += `<h1>${escapeHtml(titleValue)}</h1>`;
+    }
+    
+    if (contentValue.trim()) {
+        try {
+            if (typeof marked !== 'undefined') {
+                html += marked.parse(contentValue);
+            } else {
+                // 备用markdown转换
+                html += simpleMarkdownToHtml(contentValue);
+            }
+        } catch (e) {
+            console.error('预览解析错误:', e);
+            html += `<pre>${escapeHtml(contentValue)}</pre>`;
+        }
+    }
+    
+    modalPreviewContent.innerHTML = html || '<p class="text-muted">暂无内容</p>';
+    
+    // 显示预览模态框
+    const previewModal = new bootstrap.Modal(document.getElementById('previewModal'));
+    previewModal.show();
+    
+    console.log('预览模态框已显示');
+}
+
+// HTML转义函数
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// 显示消息提示
+function showMessage(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    
+    alertDiv.appendChild(document.createTextNode(message));
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'btn-close';
+    closeBtn.setAttribute('data-bs-dismiss', 'alert');
+    closeBtn.setAttribute('aria-label', '关闭');
+    alertDiv.appendChild(closeBtn);
+    
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+// 添加测试按钮功能
+function testMarkdown() {
+    const content = document.getElementById('article-content');
+    if (content) {
+        const testMarkdown = `# 🎯 Markdown功能测试
+
+## 📝 文本格式
+
+这是**粗体文字**和*斜体文字*的组合测试。
+
+你也可以使用\`行内代码\`来标记代码片段。
+
+## 🔗 链接和图片
+
+[访问GitHub](https://github.com) - 这是一个外部链接
+
+![示例图片](https://via.placeholder.com/400x200/007bff/ffffff?text=测试图片)
+
+## 📋 列表功能
+
+### 无序列表
+- 第一项功能
+- 第二项功能
+- 第三项功能
+  - 子项目 1
+  - 子项目 2
+
+### 有序列表
+1. 步骤一
+2. 步骤二
+3. 步骤三
+
+## 💻 代码示例
+
+\`\`\`javascript
+// JavaScript代码示例
+function greetUser(name) {
+    console.log(\`Hello, \${name}!\`);
+    return \`Welcome to our blog, \${name}!\`;
+}
+
+greetUser('Claude');
+\`\`\`
+
+\`\`\`python
+# Python代码示例
+def calculate_fibonacci(n):
+    if n <= 1:
+        return n
+    return calculate_fibonacci(n-1) + calculate_fibonacci(n-2)
+
+print(calculate_fibonacci(10))
+\`\`\`
+
+## 🔧 其他功能
+
+> 这是一个引用块的示例
+> 可以用来突出重要信息
+
+---
+
+**提示**: 点击预览按钮查看渲染效果，或者尝试上传图片测试功能！`;
+        
+        content.value = testMarkdown;
+        showMessage('已插入完整的Markdown测试内容，点击预览按钮查看效果！', 'success');
+    }
+}
+
+// 简单markdown转换（全局函数）
+function simpleMarkdownToHtml(markdown) {
+    let html = markdown;
+    
+    // 首先保护已有的HTML标签（特别是img标签）
+    const htmlTags = [];
+    html = html.replace(/<[^>]+>/g, function(match) {
+        const index = htmlTags.length;
+        htmlTags.push(match);
+        return `__HTML_TAG_${index}__`;
+    });
+    
+    // 首先处理代码块（防止被其他规则干扰）
+    html = html.replace(/```(\w+)?\n([\s\S]*?)```/gm, function(match, lang, code) {
+        return `<pre><code class="language-${lang || 'text'}">${escapeHtml(code.trim())}</code></pre>`;
+    });
+    
+    // 处理行内代码（必须在代码块之后处理）
+    html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    
+    // 处理标题
+    html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+    html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+    html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+    
+    // 处理图片（必须在链接之前处理）
+    html = html.replace(/!\[([^\]]*)\]\(([^\)]*)\)/gim, '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 0.375rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">');
+    
+    // 处理链接
+    html = html.replace(/\[([^\]]*)\]\(([^\)]*)\)/gim, '<a href="$2" target="_blank" style="color: #0066cc; text-decoration: underline;">$1</a>');
+    
+    // 处理粗体和斜体
+    html = html.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
+    html = html.replace(/\*(.*?)\*/gim, '<em>$1</em>');
+    
+    // 处理引用块
+    html = html.replace(/^> (.*$)/gim, '<blockquote style="border-left: 4px solid #dee2e6; padding-left: 1rem; margin: 1rem 0; color: #6c757d; font-style: italic;">$1</blockquote>');
+    
+    // 处理分隔线
+    html = html.replace(/^---$/gim, '<hr style="border: none; border-top: 2px solid #dee2e6; margin: 2rem 0;">');
+    
+    // 处理列表
+    const lines = html.split('\n');
+    let inList = false;
+    let processedLines = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const isListItem = /^[\s]*[-*+]\s+/.test(line);
+        
+        if (isListItem) {
+            if (!inList) {
+                processedLines.push('<ul>');
+                inList = true;
+            }
+            const listContent = line.replace(/^[\s]*[-*+]\s+/, '');
+            processedLines.push(`<li>${listContent}</li>`);
+        } else {
+            if (inList) {
+                processedLines.push('</ul>');
+                inList = false;
+            }
+            processedLines.push(line);
+        }
+    }
+    
+    if (inList) {
+        processedLines.push('</ul>');
+    }
+    
+    html = processedLines.join('\n');
+    
+    // 处理段落（避免影响已处理的HTML标签）
+    const paragraphs = html.split('\n\n');
+    html = paragraphs.map(paragraph => {
+        const trimmed = paragraph.trim();
+        if (!trimmed) return '';
+        
+        // 检查是否已经是HTML标签（标题、列表、代码块等）或包含HTML标签占位符
+        if (/^<(h[1-6]|ul|ol|pre|blockquote)/.test(trimmed) || 
+            /<\/(h[1-6]|ul|ol|pre|blockquote)>$/.test(trimmed) ||
+            /__HTML_TAG_\d+__/.test(trimmed)) {
+            return trimmed;
+        }
+        
+        // 处理普通段落的换行
+        const lines = trimmed.split('\n');
+        const processedParagraph = lines.join('<br>');
+        
+        return `<p>${processedParagraph}</p>`;
+    }).filter(p => p).join('');
+    
+    // 恢复HTML标签
+    htmlTags.forEach((tag, index) => {
+        html = html.replace(`__HTML_TAG_${index}__`, tag);
+    });
+    
+    return html;
+}
+
+console.log('JavaScript脚本加载完成');
+</script>
+{% endblock %} 

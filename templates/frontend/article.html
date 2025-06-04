@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+
+{% block title %}{{ article.title }} - 我的个人博客{% endblock %}
+
+{% block extra_css %}
+<style>
+/* 文章详情页样式 */
+.article-header {
+    text-align: center;
+    padding: 3rem 0 2rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.article-title {
+    font-size: 2.5rem;
+    font-weight: 300;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+}
+
+.article-meta {
+    color: #6c757d;
+    font-size: 0.95rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.article-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.article-badges {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.article-content {
+    max-width: 800px;
+    margin: 0 auto;
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: #333;
+}
+
+/* Markdown内容样式 */
+.article-content h1,
+.article-content h2,
+.article-content h3,
+.article-content h4,
+.article-content h5,
+.article-content h6 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.article-content h1 {
+    font-size: 2rem;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 0.5rem;
+}
+
+.article-content h2 {
+    font-size: 1.5rem;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 0.3rem;
+}
+
+.article-content h3 {
+    font-size: 1.3rem;
+}
+
+.article-content p {
+    margin-bottom: 1.2rem;
+    text-align: justify;
+}
+
+.article-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    margin: 1.5rem 0;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.article-content blockquote {
+    border-left: 4px solid #007bff;
+    margin: 1.5rem 0;
+    padding: 1rem 1.5rem;
+    background-color: rgba(0, 123, 255, 0.05);
+    border-radius: 0 8px 8px 0;
+    font-style: italic;
+}
+
+.article-content code {
+    background-color: #f8f9fa;
+    color: #e83e8c;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.article-content pre {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    border: 1px solid #dee2e6;
+}
+
+.article-content pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+}
+
+.article-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    background-color: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.article-content th,
+.article-content td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.article-content th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.article-content ul,
+.article-content ol {
+    margin: 1rem 0;
+    padding-left: 2rem;
+}
+
+.article-content li {
+    margin-bottom: 0.5rem;
+}
+
+/* 返回首页按钮 */
+.back-home {
+    position: fixed;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 100;
+}
+
+.back-home-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    text-decoration: none;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.back-home-btn:hover {
+    transform: translateY(-2px) scale(1.1);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    color: white;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .article-title {
+        font-size: 2rem;
+    }
+    
+    .article-header {
+        padding: 2rem 0 1.5rem;
+    }
+    
+    .article-meta {
+        font-size: 0.85rem;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .article-content {
+        font-size: 1rem;
+        line-height: 1.6;
+    }
+    
+    .back-home {
+        position: static;
+        transform: none;
+        margin: 2rem 0;
+        text-align: center;
+    }
+    
+    .back-home-btn {
+        position: relative;
+        display: inline-flex;
+        width: auto;
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+    }
+}
+
+@media (max-width: 576px) {
+    .article-title {
+        font-size: 1.5rem;
+    }
+    
+    .article-content {
+        padding: 0 1rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 返回首页按钮 -->
+<div class="back-home">
+    <a href="{{ url_for('frontend.index') }}" class="back-home-btn" title="返回首页">
+        <i class="fas fa-home"></i>
+        <span class="d-none d-md-inline ms-2">返回首页</span>
+    </a>
+</div>
+
+<article class="container">
+    <!-- 文章头部 -->
+    <header class="article-header">
+        <h1 class="article-title">{{ article.title }}</h1>
+        
+        <!-- 文章元信息 -->
+        <div class="article-meta">
+            <div class="article-meta-item">
+                <i class="fas fa-calendar-alt"></i>
+                <span>{{ article.created_at.strftime('%Y年%m月%d日') }}</span>
+            </div>
+            
+            {% if article.updated_at and article.updated_at != article.created_at %}
+            <div class="article-meta-item">
+                <i class="fas fa-edit"></i>
+                <span>更新于 {{ article.updated_at.strftime('%Y年%m月%d日') }}</span>
+            </div>
+            {% endif %}
+            
+            <div class="article-meta-item">
+                <i class="fas fa-eye"></i>
+                <span>{{ article.view_count }} 次浏览</span>
+            </div>
+            
+            {% if article.author %}
+            <div class="article-meta-item">
+                <i class="fas fa-user"></i>
+                <span>{{ article.author }}</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- 文章标识 -->
+        <div class="article-badges">
+            {% if article.is_top %}
+                <span class="badge bg-warning text-dark">
+                    <i class="fas fa-thumbtack"></i> 置顶
+                </span>
+            {% endif %}
+            
+            {% if article.permission == 'verify' %}
+                <span class="badge bg-secondary">
+                    <i class="fas fa-lock"></i> 需要验证
+                </span>
+            {% else %}
+                <span class="badge bg-success">
+                    <i class="fas fa-unlock"></i> 公开
+                </span>
+            {% endif %}
+            
+            {% if article.tags %}
+                {% for tag in article.tags %}
+                <span class="badge me-1" style="background-color: {{ tag.color }}; color: white;">
+                    <i class="fas fa-tag"></i> {{ tag.name }}
+                </span>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </header>
+    
+    <!-- 文章内容 -->
+    <div class="article-content">
+        {% if article.content %}
+            {{ article.content | markdown | safe }}
+        {% else %}
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-file-alt fa-3x mb-3"></i>
+                <p>暂无内容</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- 文章底部信息 -->
+    <div class="text-center mt-5 pt-4 border-top">
+        <p class="text-muted small">
+            <i class="fas fa-heart text-danger"></i> 
+            感谢您的阅读！如果觉得文章有帮助，欢迎分享给朋友。
+        </p>
+        
+        <div class="mt-3">
+            <a href="{{ url_for('frontend.index') }}" class="btn btn-outline-primary">
+                <i class="fas fa-home"></i> 返回首页
+            </a>
+        </div>
+    </div>
+</article>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 为文章内容中的链接添加新窗口打开
+    const articleContent = document.querySelector('.article-content');
+    if (articleContent) {
+        const links = articleContent.querySelectorAll('a[href^="http"]');
+        links.forEach(link => {
+            link.setAttribute('target', '_blank');
+            link.setAttribute('rel', 'noopener noreferrer');
+        });
+    }
+    
+    // 平滑滚动到锚点
+    const anchorLinks = document.querySelectorAll('a[href^="#"]');
+    anchorLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            const targetId = this.getAttribute('href').substring(1);
+            const targetElement = document.getElementById(targetId);
+            
+            if (targetElement) {
+                e.preventDefault();
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+    
+    // 代码块复制功能
+    const codeBlocks = document.querySelectorAll('pre code');
+    codeBlocks.forEach(codeBlock => {
+        const pre = codeBlock.parentElement;
+        const copyBtn = document.createElement('button');
+        copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+        copyBtn.className = 'btn btn-outline-secondary btn-sm position-absolute top-0 end-0 m-2';
+        copyBtn.style.opacity = '0.7';
+        copyBtn.title = '复制代码';
+        
+        pre.style.position = 'relative';
+        pre.appendChild(copyBtn);
+        
+        copyBtn.addEventListener('click', function() {
+            navigator.clipboard.writeText(codeBlock.textContent).then(() => {
+                copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+                copyBtn.classList.remove('btn-outline-secondary');
+                copyBtn.classList.add('btn-success');
+                
+                setTimeout(() => {
+                    copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+                    copyBtn.classList.remove('btn-success');
+                    copyBtn.classList.add('btn-outline-secondary');
+                }, 2000);
+            });
+        });
+    });
+});
+</script>
+{% endblock %} 

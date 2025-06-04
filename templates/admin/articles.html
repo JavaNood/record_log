@@ -1,0 +1,681 @@
+{% extends "admin/base.html" %}
+
+{% block title %}文章管理{% endblock %}
+{% block page_title %}文章管理{% endblock %}
+{% block page_subtitle %}管理所有文章内容{% endblock %}
+
+{% block content %}
+<div class="admin-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0">
+            <i class="fas fa-file-alt me-2"></i>文章列表
+        </h4>
+        <div>
+            <a href="{{ url_for('admin.new_article') }}" class="btn btn-success">
+                <i class="fas fa-plus me-2"></i>新建文章
+            </a>
+        </div>
+    </div>
+
+    {% if articles.items %}
+    <!-- 文章表格 -->
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th width="5%">
+                        <input type="checkbox" id="selectAll" class="form-check-input" aria-label="全选所有文章">
+                    </th>
+                    <th width="25%">标题</th>
+                    <th width="15%">标签</th>
+                    <th width="10%">权限</th>
+                    <th width="8%">状态</th>
+                    <th width="8%">浏览数</th>
+                    <th width="10%">创建时间</th>
+                    <th width="10%">更新时间</th>
+                    <th width="9%">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for article in articles.items %}
+                <tr data-article-id="{{ article.id }}">
+                    <td>
+                        <input type="checkbox" class="form-check-input article-checkbox" value="{{ article.id }}" aria-label="选择文章: {{ article.title }}">
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            {% if article.is_top %}
+                                <span class="badge bg-warning me-2">
+                                    <i class="fas fa-thumbtack"></i> 置顶
+                                </span>
+                            {% endif %}
+                            <div>
+                                <div class="fw-bold">{{ article.title|truncate(40) }}</div>
+                                {% if article.summary %}
+                                    <small class="text-muted">{{ article.summary|truncate(60) }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {% for tag in article.tags %}
+                            <span class="badge me-1" style="background-color: {{ tag.color }}">{{ tag.name }}</span>
+                        {% else %}
+                            <span class="text-muted">无标签</span>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% if article.permission == 'public' %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-globe me-1"></i>公开
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning">
+                                <i class="fas fa-lock me-1"></i>需验证
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="status-badge" data-article-id="{{ article.id }}">
+                            {% if article.status == 'published' %}
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-check-circle me-1"></i>已发布
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-edit me-1"></i>草稿
+                                </span>
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="text-muted">
+                            <i class="fas fa-eye me-1"></i>{{ article.view_count }}
+                        </span>
+                    </td>
+                    <td>
+                        <small class="text-muted">
+                            {{ article.created_at.strftime('%Y-%m-%d') }}<br>
+                            {{ article.created_at.strftime('%H:%M') }}
+                        </small>
+                    </td>
+                    <td>
+                        <small class="text-muted">
+                            {{ article.updated_at.strftime('%Y-%m-%d') }}<br>
+                            {{ article.updated_at.strftime('%H:%M') }}
+                        </small>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{{ url_for('admin.edit_article', article_id=article.id) }}" class="btn btn-outline-primary" title="编辑文章">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn btn-outline-success toggle-status-btn" 
+                                    data-article-id="{{ article.id }}" 
+                                    data-current-status="{{ article.status }}"
+                                    data-article-title="{{ article.title|e }}" 
+                                    title="切换状态">
+                                {% if article.status == 'published' %}
+                                    <i class="fas fa-edit"></i>
+                                {% else %}
+                                    <i class="fas fa-check"></i>
+                                {% endif %}
+                            </button>
+                            <button class="btn btn-outline-danger delete-single-btn" 
+                                    data-article-id="{{ article.id }}" 
+                                    data-article-title="{{ article.title|e }}" 
+                                    title="删除文章">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 批量操作栏 -->
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <div class="d-flex align-items-center">
+            <span class="me-3">批量操作：</span>
+            <button class="btn btn-sm btn-outline-danger me-2" disabled id="batchDeleteBtn">
+                <i class="fas fa-trash me-1"></i>删除选中
+            </button>
+            <button class="btn btn-sm btn-outline-primary me-2" disabled id="batchPublishBtn">
+                <i class="fas fa-check me-1"></i>发布选中
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" disabled id="batchDraftBtn">
+                <i class="fas fa-edit me-1"></i>设为草稿
+            </button>
+        </div>
+        <div class="text-muted">
+            共 {{ articles.total }} 篇文章
+        </div>
+    </div>
+
+    <!-- 分页 -->
+    {% if articles.pages > 1 %}
+    <nav aria-label="文章分页" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if articles.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin.articles', page=articles.prev_num) }}">
+                        <i class="fas fa-chevron-left"></i> 上一页
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">
+                        <i class="fas fa-chevron-left"></i> 上一页
+                    </span>
+                </li>
+            {% endif %}
+
+            {% for page_num in articles.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                {% if page_num %}
+                    {% if page_num != articles.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin.articles', page=page_num) }}">{{ page_num }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">…</span>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if articles.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin.articles', page=articles.next_num) }}">
+                        下一页 <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">
+                        下一页 <i class="fas fa-chevron-right"></i>
+                    </span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <!-- 空状态 -->
+    <div class="text-center py-5">
+        <i class="fas fa-file-alt fa-4x text-muted mb-3"></i>
+        <h5 class="text-muted">还没有文章</h5>
+        <p class="text-muted">点击"新建文章"开始创建第一篇文章</p>
+        <a href="{{ url_for('admin.new_article') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>新建文章
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 确认删除模态框 -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>确认删除
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3" id="deleteMessage">确定要删除这些文章吗？</p>
+                <div class="alert alert-warning mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>注意：</strong>删除操作不可恢复，请谨慎操作。
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="fas fa-trash me-2"></i>确认删除
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 确认状态切换模态框 -->
+<div class="modal fade" id="statusConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-sync-alt text-info me-2"></i>确认状态切换
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3" id="statusMessage">确定要修改文章状态吗？</p>
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>提示：</strong>状态修改后会立即生效。
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="confirmStatusBtn">
+                    <i class="fas fa-check me-2"></i>确认修改
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const articleCheckboxes = document.querySelectorAll('.article-checkbox');
+    const batchDeleteBtn = document.getElementById('batchDeleteBtn');
+    const batchPublishBtn = document.getElementById('batchPublishBtn');
+    const batchDraftBtn = document.getElementById('batchDraftBtn');
+    const deleteConfirmModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    const statusConfirmModal = new bootstrap.Modal(document.getElementById('statusConfirmModal'));
+    const deleteMessage = document.getElementById('deleteMessage');
+    const statusMessage = document.getElementById('statusMessage');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const confirmStatusBtn = document.getElementById('confirmStatusBtn');
+    
+    let pendingDelete = null; // 待删除的操作信息
+    let pendingStatus = null; // 待状态切换的操作信息
+
+    // 全选/取消全选
+    selectAllCheckbox.addEventListener('change', function() {
+        articleCheckboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateBatchButtons();
+    });
+
+    // 单选处理
+    articleCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const checkedCount = document.querySelectorAll('.article-checkbox:checked').length;
+            const totalCount = articleCheckboxes.length;
+            
+            selectAllCheckbox.checked = checkedCount === totalCount;
+            selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < totalCount;
+            
+            updateBatchButtons();
+        });
+    });
+
+    // 更新批量操作按钮状态
+    function updateBatchButtons() {
+        const checkedCount = document.querySelectorAll('.article-checkbox:checked').length;
+        const hasSelection = checkedCount > 0;
+        
+        batchDeleteBtn.disabled = !hasSelection;
+        batchPublishBtn.disabled = !hasSelection;
+        batchDraftBtn.disabled = !hasSelection;
+    }
+
+    // 单个删除按钮点击事件
+    document.querySelectorAll('.delete-single-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const articleId = parseInt(this.dataset.articleId);
+            const articleTitle = this.dataset.articleTitle;
+            
+            pendingDelete = {
+                type: 'single',
+                articleId: articleId,
+                articleTitle: articleTitle
+            };
+            
+            deleteMessage.textContent = '确定要删除文章《' + articleTitle + '》吗？';
+            deleteConfirmModal.show();
+        });
+    });
+
+    // 单个状态切换按钮点击事件
+    document.querySelectorAll('.toggle-status-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const articleId = parseInt(this.dataset.articleId);
+            const currentStatus = this.dataset.currentStatus;
+            const articleTitle = this.dataset.articleTitle;
+            const newStatus = currentStatus === 'published' ? 'draft' : 'published';
+            const newStatusText = newStatus === 'published' ? '发布' : '草稿';
+            
+            pendingStatus = {
+                type: 'single',
+                articleId: articleId,
+                articleTitle: articleTitle,
+                newStatus: newStatus
+            };
+            
+            statusMessage.textContent = '确定要将文章《' + articleTitle + '》设为' + newStatusText + '吗？';
+            statusConfirmModal.show();
+        });
+    });
+
+    // 批量删除按钮点击事件
+    batchDeleteBtn.addEventListener('click', function() {
+        const checkedBoxes = document.querySelectorAll('.article-checkbox:checked');
+        const articleIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+        
+        if (articleIds.length === 0) {
+            showMessage('请选择要删除的文章', 'warning');
+            return;
+        }
+        
+        pendingDelete = {
+            type: 'batch',
+            articleIds: articleIds
+        };
+        
+        const count = articleIds.length;
+        deleteMessage.textContent = '确定要删除选中的 ' + count + ' 篇文章吗？';
+        deleteConfirmModal.show();
+    });
+
+    // 批量发布按钮点击事件
+    batchPublishBtn.addEventListener('click', function() {
+        const checkedBoxes = document.querySelectorAll('.article-checkbox:checked');
+        const articleIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+        
+        if (articleIds.length === 0) {
+            showMessage('请选择要发布的文章', 'warning');
+            return;
+        }
+        
+        pendingStatus = {
+            type: 'batch',
+            articleIds: articleIds,
+            targetStatus: 'published'
+        };
+        
+        const count = articleIds.length;
+        statusMessage.textContent = '确定要将选中的 ' + count + ' 篇文章设为发布状态吗？';
+        statusConfirmModal.show();
+    });
+
+    // 批量设为草稿按钮点击事件
+    batchDraftBtn.addEventListener('click', function() {
+        const checkedBoxes = document.querySelectorAll('.article-checkbox:checked');
+        const articleIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+        
+        if (articleIds.length === 0) {
+            showMessage('请选择要设为草稿的文章', 'warning');
+            return;
+        }
+        
+        pendingStatus = {
+            type: 'batch',
+            articleIds: articleIds,
+            targetStatus: 'draft'
+        };
+        
+        const count = articleIds.length;
+        statusMessage.textContent = '确定要将选中的 ' + count + ' 篇文章设为草稿状态吗？';
+        statusConfirmModal.show();
+    });
+
+    // 确认删除按钮点击事件
+    confirmDeleteBtn.addEventListener('click', function() {
+        if (!pendingDelete) return;
+        
+        const btn = this;
+        const originalText = btn.innerHTML;
+        
+        // 避免HTML字符串导致的语法错误，使用DOM操作
+        btn.innerHTML = '';
+        const spinner = document.createElement('i');
+        spinner.className = 'fas fa-spinner fa-spin me-2';
+        btn.appendChild(spinner);
+        btn.appendChild(document.createTextNode('删除中...'));
+        
+        if (pendingDelete.type === 'single') {
+            // 单个删除
+            fetch('/admin/article/delete/' + pendingDelete.articleId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    // 移除对应的表格行
+                    const row = document.querySelector('[data-article-id="' + pendingDelete.articleId + '"]');
+                    if (row) {
+                        row.remove();
+                    }
+                    updateArticleCount();
+                } else {
+                    showMessage(data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('删除失败:', error);
+                showMessage('删除失败，请稍后重试', 'danger');
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                deleteConfirmModal.hide();
+                pendingDelete = null;
+            });
+        } else if (pendingDelete.type === 'batch') {
+            // 批量删除
+            fetch('/admin/articles/batch-delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    article_ids: pendingDelete.articleIds
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    // 移除对应的表格行
+                    pendingDelete.articleIds.forEach(articleId => {
+                        const row = document.querySelector('[data-article-id="' + articleId + '"]');
+                        if (row) {
+                            row.remove();
+                        }
+                    });
+                    // 重置选择状态
+                    selectAllCheckbox.checked = false;
+                    selectAllCheckbox.indeterminate = false;
+                    updateBatchButtons();
+                    updateArticleCount();
+                } else {
+                    showMessage(data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('批量删除失败:', error);
+                showMessage('批量删除失败，请稍后重试', 'danger');
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                deleteConfirmModal.hide();
+                pendingDelete = null;
+            });
+        }
+    });
+
+    // 确认状态切换按钮点击事件
+    confirmStatusBtn.addEventListener('click', function() {
+        if (!pendingStatus) return;
+        
+        const btn = this;
+        const originalText = btn.innerHTML;
+        
+        // 显示加载状态
+        btn.innerHTML = '';
+        const spinner = document.createElement('i');
+        spinner.className = 'fas fa-spinner fa-spin me-2';
+        btn.appendChild(spinner);
+        btn.appendChild(document.createTextNode('修改中...'));
+        
+        if (pendingStatus.type === 'single') {
+            // 单个状态切换
+            fetch('/admin/article/toggle-status/' + pendingStatus.articleId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    // 更新状态显示
+                    updateStatusBadge(pendingStatus.articleId, data.new_status, data.new_status_text);
+                    // 更新按钮图标
+                    updateStatusButton(pendingStatus.articleId, data.new_status);
+                } else {
+                    showMessage(data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('状态切换失败:', error);
+                showMessage('状态切换失败，请稍后重试', 'danger');
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                statusConfirmModal.hide();
+                pendingStatus = null;
+            });
+        } else if (pendingStatus.type === 'batch') {
+            // 批量状态切换
+            fetch('/admin/articles/batch-status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    article_ids: pendingStatus.articleIds,
+                    target_status: pendingStatus.targetStatus
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    // 更新状态显示
+                    pendingStatus.articleIds.forEach(articleId => {
+                        updateStatusBadge(articleId, data.target_status, data.status_text);
+                        updateStatusButton(articleId, data.target_status);
+                    });
+                    // 重置选择状态
+                    selectAllCheckbox.checked = false;
+                    selectAllCheckbox.indeterminate = false;
+                    updateBatchButtons();
+                } else {
+                    showMessage(data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('批量状态切换失败:', error);
+                showMessage('批量状态切换失败，请稍后重试', 'danger');
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                statusConfirmModal.hide();
+                pendingStatus = null;
+            });
+        }
+    });
+
+    // 更新状态徽章显示
+    function updateStatusBadge(articleId, newStatus, statusText) {
+        const statusBadge = document.querySelector('.status-badge[data-article-id="' + articleId + '"] span');
+        if (statusBadge) {
+            statusBadge.innerHTML = '';
+            
+            const icon = document.createElement('i');
+            if (newStatus === 'published') {
+                statusBadge.className = 'badge bg-primary';
+                icon.className = 'fas fa-check-circle me-1';
+            } else {
+                statusBadge.className = 'badge bg-secondary';
+                icon.className = 'fas fa-edit me-1';
+            }
+            
+            statusBadge.appendChild(icon);
+            statusBadge.appendChild(document.createTextNode(statusText));
+        }
+    }
+
+    // 更新状态切换按钮图标
+    function updateStatusButton(articleId, newStatus) {
+        const statusBtn = document.querySelector('.toggle-status-btn[data-article-id="' + articleId + '"]');
+        if (statusBtn) {
+            statusBtn.dataset.currentStatus = newStatus;
+            const icon = statusBtn.querySelector('i');
+            if (icon) {
+                if (newStatus === 'published') {
+                    icon.className = 'fas fa-edit';
+                    statusBtn.title = '设为草稿';
+                } else {
+                    icon.className = 'fas fa-check';
+                    statusBtn.title = '发布文章';
+                }
+            }
+        }
+    }
+
+    // 显示消息提示
+    function showMessage(message, type) {
+        // 创建提示框
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show position-fixed';
+        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        
+        // 安全地设置消息内容
+        alertDiv.appendChild(document.createTextNode(message));
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'btn-close';
+        closeBtn.setAttribute('data-bs-dismiss', 'alert');
+        closeBtn.setAttribute('aria-label', '关闭');
+        alertDiv.appendChild(closeBtn);
+        
+        document.body.appendChild(alertDiv);
+        
+        // 3秒后自动移除
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 3000);
+    }
+
+    // 更新文章数量显示
+    function updateArticleCount() {
+        const remainingRows = document.querySelectorAll('tbody tr').length;
+        const countElement = document.querySelector('.text-muted');
+        if (countElement && countElement.textContent.includes('共')) {
+            if (remainingRows === 0) {
+                // 如果没有文章了，刷新页面显示空状态
+                window.location.reload();
+            }
+        }
+    }
+});
+</script>
+{% endblock %} 
