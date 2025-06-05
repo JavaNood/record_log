@@ -30,81 +30,138 @@
             </h3>
             <p class="mb-0 text-muted">
                 这里是博客管理后台，您可以管理文章、标签、系统设置等。
-                <br>
-                <small class="text-success">
-                    <i class="fas fa-check-circle me-1"></i>
-                    Task 22已完成：文章列表管理页面已创建，支持分页和批量操作。
-                </small>
             </p>
         </div>
     </div>
 </div>
 
-<!-- 功能模块 -->
-<div class="row g-4">
-    <div class="col-md-6 col-lg-4">
-        <div class="feature-card text-center">
-            <i class="fas fa-file-alt feature-icon"></i>
-            <h5>文章管理</h5>
-            <p class="text-muted">创建、编辑、删除文章，管理文章状态</p>
-            <a href="{{ url_for('admin.articles') }}" class="btn btn-primary">
-                <i class="fas fa-arrow-right me-2"></i>进入管理
-            </a>
+<!-- 内容管理 -->
+<div class="settings-section">
+    <h4 class="section-title">
+        <i class="fas fa-edit me-2"></i>内容管理
+    </h4>
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="feature-card text-center">
+                <i class="fas fa-file-alt feature-icon"></i>
+                <h5>文章管理</h5>
+                <p class="text-muted">创建、编辑、删除文章，管理文章状态</p>
+                <a href="{{ url_for('admin.articles') }}" class="btn btn-primary">
+                    <i class="fas fa-arrow-right me-2"></i>进入管理
+                </a>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="feature-card text-center">
+                <i class="fas fa-tags feature-icon"></i>
+                <h5>标签管理</h5>
+                <p class="text-muted">创建、编辑标签，设置标签颜色</p>
+                <a href="{{ url_for('admin.tags') }}" class="btn btn-primary">
+                    <i class="fas fa-arrow-right me-2"></i>进入管理
+                </a>
+            </div>
         </div>
     </div>
-    
-    <div class="col-md-6 col-lg-4">
-        <div class="feature-card text-center">
-            <i class="fas fa-tags feature-icon"></i>
-            <h5>标签管理</h5>
-            <p class="text-muted">创建、编辑标签，设置标签颜色</p>
-            <a href="{{ url_for('admin.tags') }}" class="btn btn-primary">
-                <i class="fas fa-arrow-right me-2"></i>进入管理
-            </a>
+</div>
+
+<!-- 数据统计 -->
+<div class="settings-section">
+    <h4 class="section-title">
+        <i class="fas fa-chart-line me-2"></i>数据统计
+    </h4>
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="feature-card text-center">
+                <i class="fas fa-analytics feature-icon"></i>
+                <h5>访问统计</h5>
+                <p class="text-muted">查看网站访问数据和用户行为分析</p>
+                <a href="{{ url_for('admin.statistics') }}" class="btn btn-primary">
+                    <i class="fas fa-arrow-right me-2"></i>查看统计
+                </a>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="feature-card text-center">
+                <i class="fas fa-download feature-icon"></i>
+                <h5>数据导出</h5>
+                <p class="text-muted">导出访问数据和文章数据</p>
+                <button class="btn btn-outline-primary" disabled>
+                    <i class="fas fa-tools me-2"></i>敬请期待
+                </button>
+            </div>
         </div>
     </div>
-    
-    <div class="col-md-6 col-lg-4">
-        <div class="feature-card text-center">
-            <i class="fas fa-home feature-icon"></i>
-            <h5>欢迎语编辑</h5>
-            <p class="text-muted">修改首页欢迎语内容和显示方式</p>
-            <button class="btn btn-outline-primary" disabled>
-                <i class="fas fa-tools me-2"></i>敬请期待
-            </button>
+</div>
+
+<!-- 网站设置 -->
+<div class="settings-section">
+    <h4 class="section-title">
+        <i class="fas fa-cog me-2"></i>网站设置
+    </h4>
+    <div class="row g-4">
+        <div class="col-md-6 col-lg-4">
+            <div class="feature-card text-center">
+                <i class="fas fa-home feature-icon"></i>
+                <h5>欢迎语设置</h5>
+                <p class="text-muted">修改首页欢迎语标题和副标题</p>
+                <a href="{{ url_for('admin.welcome_edit') }}" class="btn btn-primary">
+                    <i class="fas fa-arrow-right me-2"></i>进入设置
+                </a>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-4">
+            <div class="feature-card text-center">
+                <i class="fas fa-image feature-icon"></i>
+                <h5>背景设置</h5>
+                <p class="text-muted">上传背景图片，设置虚化效果</p>
+                <a href="{{ url_for('admin.background_edit') }}" class="btn btn-primary">
+                    <i class="fas fa-arrow-right me-2"></i>进入设置
+                </a>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-4">
+            <div class="feature-card text-center">
+                <i class="fas fa-palette feature-icon"></i>
+                <h5>主题设置</h5>
+                <p class="text-muted">自定义网站颜色和样式</p>
+                <button class="btn btn-outline-primary" disabled>
+                    <i class="fas fa-tools me-2"></i>敬请期待
+                </button>
+            </div>
         </div>
     </div>
-    
-    <div class="col-md-6 col-lg-4">
-        <div class="feature-card text-center">
-            <i class="fas fa-image feature-icon"></i>
-            <h5>修改网页背景</h5>
-            <p class="text-muted">上传和设置网站背景图片</p>
-            <button class="btn btn-outline-primary" disabled>
-                <i class="fas fa-tools me-2"></i>敬请期待
-            </button>
+</div>
+
+<!-- 账户安全 -->
+<div class="settings-section">
+    <h4 class="section-title">
+        <i class="fas fa-shield-alt me-2"></i>账户安全
+    </h4>
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="feature-card text-center">
+                <i class="fas fa-key feature-icon"></i>
+                <h5>修改密码</h5>
+                <p class="text-muted">更改管理员登录密码</p>
+                <a href="{{ url_for('admin.password_change') }}" class="btn btn-primary">
+                    <i class="fas fa-arrow-right me-2"></i>进入设置
+                </a>
+            </div>
         </div>
-    </div>
-    
-    <div class="col-md-6 col-lg-4">
-        <div class="feature-card text-center">
-            <i class="fas fa-key feature-icon"></i>
-            <h5>修改密码</h5>
-            <p class="text-muted">更改管理员账号密码</p>
-            <button class="btn btn-outline-primary" disabled>
-                <i class="fas fa-tools me-2"></i>敬请期待
-            </button>
-        </div>
-    </div>
-    
-    <div class="col-md-6 col-lg-4">
-        <div class="feature-card text-center">
-            <i class="fas fa-cog feature-icon"></i>
-            <h5>系统设置</h5>
-            <p class="text-muted">其他系统配置选项</p>
-            <button class="btn btn-outline-primary" disabled>
-                <i class="fas fa-tools me-2"></i>敬请期待
-            </button>
+        
+        <div class="col-md-6">
+            <div class="feature-card text-center">
+                <i class="fas fa-history feature-icon"></i>
+                <h5>登录记录</h5>
+                <p class="text-muted">查看登录历史和会话信息</p>
+                <button class="btn btn-outline-primary" disabled>
+                    <i class="fas fa-tools me-2"></i>敬请期待
+                </button>
+            </div>
         </div>
     </div>
 </div>

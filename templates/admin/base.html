@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: blob:; connect-src 'self';">
     <title>{% block title %}管理后台{% endblock %} - 我的个人博客</title>
     
     <!-- Bootstrap CSS -->
@@ -88,6 +88,98 @@
             color: #dc3545;
         }
         
+        /* 设置分组样式 */
+        .settings-section {
+            margin-bottom: 3rem;
+        }
+        
+        .section-title {
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+        }
+        
+        /* 统一提示组件 */
+        .alert {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .alert-success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+        }
+        
+        .alert-danger {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+        }
+        
+        .alert-info {
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+            color: #0c5460;
+        }
+        
+        .alert-warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            color: #856404;
+        }
+        
+        /* 面包屑导航 */
+        .breadcrumb-nav {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .breadcrumb {
+            margin-bottom: 0;
+            background: none;
+        }
+        
+        .breadcrumb-item a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .breadcrumb-item a:hover {
+            color: #764ba2;
+        }
+        
+        /* 表单优化 */
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        /* 按钮优化 */
+        .btn {
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            transform: translateY(-1px);
+        }
+        
         /* 响应式设计优化 */
         @media (max-width: 768px) {
             .header h1 {
@@ -102,6 +194,14 @@
             
             .feature-card {
                 margin-bottom: 1rem;
+            }
+            
+            .settings-section {
+                margin-bottom: 2rem;
+            }
+            
+            .section-title {
+                font-size: 1.1rem;
             }
         }
         
@@ -174,18 +274,11 @@
         </div>
         {% endif %}
         
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                        <i class="fas fa-{{ 'exclamation-circle' if category == 'error' or category == 'danger' else 'check-circle' if category == 'success' else 'info-circle' }} me-2"></i>
-                        {{ message|e }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+        <!-- 统一消息提示组件 -->
+        {% include 'components/messages.html' %}
+        
+        <!-- 面包屑导航 -->
+        {% block breadcrumb %}{% endblock %}
         
         <!-- 主要内容 -->
         {% block content %}{% endblock %}
@@ -193,8 +286,8 @@
         <!-- 版本信息 -->
         <div class="text-center mt-5 mb-4">
             <small class="text-muted">
-                <i class="fas fa-code me-2"></i>
-                个人博客管理系统 v1.0 | Task 28 完成 - 完善标签功能
+                <!-- <i class="fas fa-code me-2"></i> -->
+                心之所向,且随风而去吧！
             </small>
         </div>
     </div>
@@ -253,6 +346,9 @@
                 });
         }, 60000); // 每分钟检查一次
     </script>
+    
+    <!-- 表单验证增强组件 -->
+    {% include 'components/form_validation.html' %}
     
     <!-- 额外的JavaScript -->
     {% block extra_js %}{% endblock %}

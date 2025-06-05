@@ -1,0 +1,224 @@
+<!-- 统一消息提示组件 -->
+
+<!-- Flash消息提示 -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="message-container mb-4">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show message-alert" role="alert">
+                    <div class="d-flex align-items-center">
+                        <div class="message-icon me-3">
+                            {% if category == 'success' %}
+                                <i class="fas fa-check-circle fa-lg text-success"></i>
+                            {% elif category == 'error' or category == 'danger' %}
+                                <i class="fas fa-exclamation-triangle fa-lg text-danger"></i>
+                            {% elif category == 'warning' %}
+                                <i class="fas fa-exclamation-circle fa-lg text-warning"></i>
+                            {% elif category == 'info' %}
+                                <i class="fas fa-info-circle fa-lg text-info"></i>
+                            {% else %}
+                                <i class="fas fa-bell fa-lg"></i>
+                            {% endif %}
+                        </div>
+                        <div class="message-content flex-grow-1">
+                            <strong>
+                                {% if category == 'success' %}
+                                    成功
+                                {% elif category == 'error' or category == 'danger' %}
+                                    错误
+                                {% elif category == 'warning' %}
+                                    警告
+                                {% elif category == 'info' %}
+                                    提示
+                                {% else %}
+                                    通知
+                                {% endif %}
+                            </strong>
+                            <div class="message-text">{{ message }}</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="关闭"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<!-- JavaScript提示框（Toast）容器 -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+    <!-- Toast 消息会动态插入这里 -->
+</div>
+
+<!-- 消息组件样式 -->
+<style>
+.message-container .message-alert {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    animation: slideInDown 0.3s ease-out;
+}
+
+.message-container .message-icon {
+    animation: pulse 2s infinite;
+}
+
+.message-container .message-content {
+    line-height: 1.4;
+}
+
+.message-container .message-text {
+    margin-top: 0.25rem;
+    font-size: 0.95rem;
+}
+
+/* 成功消息样式 */
+.alert-success {
+    background-color: rgba(212, 237, 218, 0.95);
+    border-left: 4px solid #198754;
+    color: #0f5132;
+}
+
+/* 错误消息样式 */
+.alert-danger {
+    background-color: rgba(248, 215, 218, 0.95);
+    border-left: 4px solid #dc3545;
+    color: #721c24;
+}
+
+/* 警告消息样式 */
+.alert-warning {
+    background-color: rgba(255, 243, 205, 0.95);
+    border-left: 4px solid #fd7e14;
+    color: #664d03;
+}
+
+/* 信息消息样式 */
+.alert-info {
+    background-color: rgba(209, 236, 241, 0.95);
+    border-left: 4px solid #0dcaf0;
+    color: #055160;
+}
+
+/* 动画效果 */
+@keyframes slideInDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* Toast 样式 */
+.toast {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+}
+
+.toast-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    background-color: transparent;
+}
+
+.toast-body {
+    background-color: rgba(255, 255, 255, 0.95);
+}
+</style>
+
+<!-- JavaScript 消息处理函数 -->
+<script>
+// 统一消息提示函数
+window.showMessage = function(message, type = 'info', duration = 4000) {
+    const toastContainer = document.querySelector('.toast-container');
+    
+    // 创建Toast元素
+    const toastId = 'toast-' + Date.now();
+    const toastHtml = `
+        <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <div class="me-auto d-flex align-items-center">
+                    <span class="toast-icon me-2">
+                        ${getIconByType(type)}
+                    </span>
+                    <strong class="toast-title">${getTitleByType(type)}</strong>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="关闭"></button>
+            </div>
+            <div class="toast-body">
+                ${message}
+            </div>
+        </div>
+    `;
+    
+    // 插入Toast
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    
+    // 显示Toast
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement, {
+        delay: duration
+    });
+    
+    toast.show();
+    
+    // 监听隐藏事件，隐藏后移除元素
+    toastElement.addEventListener('hidden.bs.toast', function() {
+        toastElement.remove();
+    });
+};
+
+// 根据类型获取图标
+function getIconByType(type) {
+    const icons = {
+        'success': '<i class="fas fa-check-circle text-success"></i>',
+        'error': '<i class="fas fa-exclamation-triangle text-danger"></i>',
+        'danger': '<i class="fas fa-exclamation-triangle text-danger"></i>',
+        'warning': '<i class="fas fa-exclamation-circle text-warning"></i>',
+        'info': '<i class="fas fa-info-circle text-info"></i>'
+    };
+    return icons[type] || icons['info'];
+}
+
+// 根据类型获取标题
+function getTitleByType(type) {
+    const titles = {
+        'success': '成功',
+        'error': '错误',
+        'danger': '错误',
+        'warning': '警告',
+        'info': '提示'
+    };
+    return titles[type] || '通知';
+}
+
+// 快捷方法
+window.showSuccess = function(message, duration) {
+    showMessage(message, 'success', duration);
+};
+
+window.showError = function(message, duration) {
+    showMessage(message, 'error', duration);
+};
+
+window.showWarning = function(message, duration) {
+    showMessage(message, 'warning', duration);
+};
+
+window.showInfo = function(message, duration) {
+    showMessage(message, 'info', duration);
+};
+</script> 

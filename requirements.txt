@@ -1,9 +1,23 @@
+# 核心框架
 Flask==2.3.3
 Werkzeug==2.3.7
+
+# 数据库
 SQLAlchemy==2.0.21
 Flask-SQLAlchemy==3.0.5
 PyMySQL==1.1.0
 cryptography>=3.4.8
-Markdown==3.5.1
+
+# 表单和验证
 Flask-WTF==1.1.1
-WTForms==3.0.1 
+WTForms==3.0.1
+
+# 内容处理
+Markdown==3.5.1
+Pillow>=9.0.0
+
+# 生产环境
+gunicorn>=21.2.0
+
+# 性能优化
+Flask-Compress>=1.13 

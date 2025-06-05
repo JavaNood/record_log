@@ -62,6 +62,11 @@ def authenticate_admin(username, password):
     if username.lower() != DEFAULT_ADMIN['username'].lower():
         return False
     
+    # 检查是否有临时密码（用于密码找回）
+    temp_password = os.environ.get('ADMIN_TEMP_PASSWORD')
+    if temp_password and password == temp_password:
+        return True
+    
     # 验证密码
     return verify_password(DEFAULT_ADMIN['password_hash'], password)
 

@@ -154,4 +154,39 @@ class ArticleEditForm(FlaskForm):
             'class': 'btn btn-primary btn-lg',
             'id': 'submit-btn'
         }
+    )
+
+
+class PasswordChangeForm(FlaskForm):
+    """密码修改表单"""
+    current_password = PasswordField(
+        '当前密码', 
+        validators=[
+            DataRequired(message='请输入当前密码'),
+            Length(min=6, max=128, message='密码长度应在6-128个字符之间')
+        ],
+        render_kw={'placeholder': '请输入当前密码', 'class': 'form-control'}
+    )
+    
+    new_password = PasswordField(
+        '新密码', 
+        validators=[
+            DataRequired(message='请输入新密码'),
+            Length(min=6, max=128, message='新密码长度应在6-128个字符之间')
+        ],
+        render_kw={'placeholder': '请输入新密码（至少6位）', 'class': 'form-control'}
+    )
+    
+    confirm_password = PasswordField(
+        '确认新密码', 
+        validators=[
+            DataRequired(message='请确认新密码'),
+            Length(min=6, max=128, message='确认密码长度应在6-128个字符之间')
+        ],
+        render_kw={'placeholder': '请再次输入新密码', 'class': 'form-control'}
+    )
+    
+    submit = SubmitField(
+        '修改密码', 
+        render_kw={'class': 'btn btn-primary'}
     ) 

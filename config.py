@@ -6,7 +6,7 @@ class Config:
     """基础配置类"""
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') \
-    or 'mysql+pymysql://myblog_user2:your_password_here@localhost/myblog'
+    or 'mysql+pymysql://root:your_password_here@localhost/record_log'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Session配置
@@ -41,10 +41,27 @@ class ProductionConfig(Config):
     """生产环境配置"""
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'mysql+pymysql://myblog_user2:your_password_here@localhost/myblog'
+        'mysql+pymysql://blog_user:your_password_here@localhost/record_log'
     
     # 生产环境session配置
     SESSION_COOKIE_SECURE = True  # 生产环境仅HTTPS
+    
+    # 性能优化配置
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 10,
+        'pool_recycle': 60,
+        'pool_pre_ping': True,
+        'max_overflow': 20
+    }
+    
+    # 压缩配置
+    COMPRESS_MIMETYPES = [
+        'text/html', 'text/css', 'text/xml', 'application/json',
+        'application/javascript', 'application/xml+rss', 'application/atom+xml',
+        'text/javascript', 'image/svg+xml'
+    ]
+    COMPRESS_LEVEL = 6
+    COMPRESS_MIN_SIZE = 500
     
     @staticmethod
     def init_app(app):

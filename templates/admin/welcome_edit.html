@@ -1,0 +1,262 @@
+{% extends "admin/base.html" %}
+
+{% block title %}欢迎语编辑{% endblock %}
+{% block page_title %}欢迎语编辑{% endblock %}
+{% block page_subtitle %}修改首页欢迎语内容和显示方式{% endblock %}
+
+{% block extra_css %}
+<style>
+.preview-card {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 25%, #90caf9 50%, #e1f5fe 75%, #f0f8ff 100%);
+    border: none;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.preview-title {
+    font-size: 2.5rem;
+    font-weight: 300;
+    color: #2c3e50;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
+}
+
+.preview-subtitle {
+    font-size: 1.2rem;
+    opacity: 0.8;
+    color: #6c757d;
+    margin-bottom: 0;
+}
+
+.form-control:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+.char-count {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.char-count.warning {
+    color: #ffc107;
+}
+
+.char-count.danger {
+    color: #dc3545;
+}
+
+.edit-card {
+    transition: transform 0.2s ease;
+}
+
+.edit-card:hover {
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .preview-title {
+        font-size: 2rem;
+    }
+    
+    .preview-subtitle {
+        font-size: 1rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- 编辑表单 -->
+    <div class="col-lg-8">
+        <div class="card edit-card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>编辑欢迎语
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="welcomeForm">
+                    <div class="mb-4">
+                        <label for="welcome_title" class="form-label">
+                            <i class="fas fa-heading me-2"></i>欢迎语标题
+                            <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="welcome_title" 
+                               name="welcome_title" 
+                               value="{{ welcome_title }}" 
+                               placeholder="请输入欢迎语标题"
+                               maxlength="100"
+                               required>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">
+                                将显示在首页最顶部的主标题
+                            </small>
+                            <small class="char-count" id="titleCount">
+                                {{ welcome_title|length }}/100
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="welcome_subtitle" class="form-label">
+                            <i class="fas fa-quote-left me-2"></i>欢迎语副标题
+                        </label>
+                        <textarea class="form-control" 
+                                  id="welcome_subtitle" 
+                                  name="welcome_subtitle" 
+                                  rows="3"
+                                  placeholder="请输入欢迎语副标题（可选）"
+                                  maxlength="200">{{ welcome_subtitle }}</textarea>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">
+                                显示在主标题下方的描述文字，支持简单的HTML标签
+                            </small>
+                            <small class="char-count" id="subtitleCount">
+                                {{ welcome_subtitle|length }}/200
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>保存更改
+                        </button>
+                        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>返回首页
+                        </a>
+                        <button type="button" class="btn btn-outline-info" id="previewBtn">
+                            <i class="fas fa-eye me-2"></i>实时预览
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 实时预览 -->
+    <div class="col-lg-4">
+        <div class="card preview-card">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="mb-0 text-center">
+                    <i class="fas fa-eye me-2"></i>效果预览
+                </h6>
+            </div>
+            <div class="card-body text-center">
+                <h1 class="preview-title" id="previewTitle">{{ welcome_title }}</h1>
+                <p class="preview-subtitle" id="previewSubtitle">{{ welcome_subtitle }}</p>
+                
+                <hr class="my-4">
+                
+                <div class="text-start">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        这是首页欢迎语在访客看到的效果预览
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 使用提示 -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>使用提示
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        标题建议保持简洁，20字以内效果最佳
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        副标题可以使用简单的HTML标签美化
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        修改后的内容会立即在前端生效
+                    </li>
+                    <li class="mb-0">
+                        <i class="fas fa-check text-success me-2"></i>
+                        支持中英文混合，emoji表情符号
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const titleInput = document.getElementById('welcome_title');
+    const subtitleInput = document.getElementById('welcome_subtitle');
+    const previewTitle = document.getElementById('previewTitle');
+    const previewSubtitle = document.getElementById('previewSubtitle');
+    const titleCount = document.getElementById('titleCount');
+    const subtitleCount = document.getElementById('subtitleCount');
+    
+    // 实时预览功能
+    function updatePreview() {
+        previewTitle.textContent = titleInput.value || '欢迎来到我的个人博客';
+        previewSubtitle.innerHTML = subtitleInput.value || '记录生活，分享想法，探索世界';
+    }
+    
+    // 字符计数功能
+    function updateCharCount(input, counter, maxLength) {
+        const currentLength = input.value.length;
+        counter.textContent = `${currentLength}/${maxLength}`;
+        
+        // 根据字符数设置颜色
+        if (currentLength > maxLength * 0.9) {
+            counter.className = 'char-count danger';
+        } else if (currentLength > maxLength * 0.8) {
+            counter.className = 'char-count warning';
+        } else {
+            counter.className = 'char-count';
+        }
+    }
+    
+    // 绑定事件
+    titleInput.addEventListener('input', function() {
+        updatePreview();
+        updateCharCount(this, titleCount, 100);
+    });
+    
+    subtitleInput.addEventListener('input', function() {
+        updatePreview();
+        updateCharCount(this, subtitleCount, 200);
+    });
+    
+    // 初始化字符计数
+    updateCharCount(titleInput, titleCount, 100);
+    updateCharCount(subtitleInput, subtitleCount, 200);
+    
+    // 表单提交验证
+    document.getElementById('welcomeForm').addEventListener('submit', function(e) {
+        if (!titleInput.value.trim()) {
+            e.preventDefault();
+            alert('欢迎语标题不能为空！');
+            titleInput.focus();
+        }
+    });
+    
+    // 预览按钮点击效果
+    document.getElementById('previewBtn').addEventListener('click', function() {
+        updatePreview();
+        const previewCard = document.querySelector('.preview-card');
+        previewCard.style.transform = 'scale(1.02)';
+        setTimeout(() => {
+            previewCard.style.transform = 'scale(1)';
+        }, 200);
+    });
+});
+</script>
+{% endblock %} 

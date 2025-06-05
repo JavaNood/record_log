@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from . import db
 
@@ -152,4 +152,70 @@ class Config(db.Model):
             'key_name': self.key_name,
             'value': self.value,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class SiteVisit(db.Model):
+    """网站访问统计模型"""
+    __tablename__ = 'site_visits'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    ip_address = db.Column(db.String(45), nullable=False, index=True)  # 支持IPv6
+    session_id = db.Column(db.String(255), nullable=False, index=True)
+    user_agent = db.Column(db.Text)  # 用户代理信息
+    referer = db.Column(db.String(255))  # 来源页面
+    visit_time = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    page_url = db.Column(db.String(255))  # 访问的页面URL
+    
+    def __repr__(self):
+        return f'<SiteVisit {self.ip_address} at {self.visit_time}>'
+    
+    def to_dict(self):
+        """转换为字典"""
+        return {
+            'id': self.id,
+            'ip_address': self.ip_address,
+            'session_id': self.session_id,
+            'user_agent': self.user_agent,
+            'referer': self.referer,
+            'visit_time': self.visit_time.isoformat() if self.visit_time else None,
+            'page_url': self.page_url
+        }
+    
+    @staticmethod
+    def get_stats():
+        """获取访问统计信息"""
+        from sqlalchemy import func, distinct
+        
+        # 总访问次数
+        total_visits = SiteVisit.query.count()
+        
+        # 独立访客数（按IP去重）
+        unique_visitors = db.session.query(func.count(distinct(SiteVisit.ip_address))).scalar()
+        
+        # 今日访问次数
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_visits = SiteVisit.query.filter(SiteVisit.visit_time >= today_start).count()
+        
+        # 今日独立访客
+        today_unique = db.session.query(func.count(distinct(SiteVisit.ip_address))).filter(
+            SiteVisit.visit_time >= today_start
+        ).scalar()
+        
+        # 最近7天访问次数
+        week_ago = datetime.now() - timedelta(days=7)
+        week_visits = SiteVisit.query.filter(SiteVisit.visit_time >= week_ago).count()
+        
+        # 最近7天独立访客
+        week_unique = db.session.query(func.count(distinct(SiteVisit.ip_address))).filter(
+            SiteVisit.visit_time >= week_ago
+        ).scalar()
+        
+        return {
+            'total_visits': total_visits or 0,
+            'unique_visitors': unique_visitors or 0,
+            'today_visits': today_visits or 0,
+            'today_unique': today_unique or 0,
+            'week_visits': week_visits or 0,
+            'week_unique': week_unique or 0
         } 

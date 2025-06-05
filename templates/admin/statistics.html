@@ -1,0 +1,337 @@
+{% extends "admin/base.html" %}
+
+{% block title %}访问统计{% endblock %}
+{% block page_title %}网站访问统计{% endblock %}
+{% block page_subtitle %}查看网站访问数据和热门内容分析{% endblock %}
+
+{% block extra_css %}
+<style>
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+.stats-card h3 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.stats-card p {
+    margin-bottom: 0;
+    opacity: 0.9;
+    font-size: 1.1rem;
+}
+
+.chart-container {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.visit-item {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.visit-item:hover {
+    background: #e3f2fd;
+}
+
+.visit-time {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.visit-ip {
+    font-family: 'Courier New', monospace;
+    background: #e9ecef;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.page-url {
+    color: #007bff;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.page-url:hover {
+    text-decoration: underline;
+}
+
+.popular-page-item {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #28a745;
+}
+
+.daily-chart {
+    height: 300px;
+    display: flex;
+    align-items: end;
+    justify-content: space-around;
+    padding: 1rem;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    background: #fafafa;
+}
+
+.chart-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    margin: 0 2px;
+}
+
+.bar-visits, .bar-unique {
+    width: 100%;
+    border-radius: 4px 4px 0 0;
+    min-height: 3px;
+    margin-bottom: 2px;
+    position: relative;
+}
+
+.bar-visits {
+    background: #667eea;
+}
+
+.bar-unique {
+    background: #28a745;
+}
+
+.bar-label {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.bar-value {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.7rem;
+    color: #333;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 总体统计卡片 -->
+    <div class="row">
+        <div class="col-lg-3 col-md-6">
+            <div class="stats-card">
+                <h3>{{ site_stats.total_visits }}</h3>
+                <p><i class="fas fa-chart-line me-2"></i>总访问次数</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stats-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <h3>{{ site_stats.unique_visitors }}</h3>
+                <p><i class="fas fa-users me-2"></i>独立访客</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stats-card" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+                <h3>{{ site_stats.today_visits }}</h3>
+                <p><i class="fas fa-calendar-day me-2"></i>今日访问</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stats-card" style="background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);">
+                <h3>{{ total_views }}</h3>
+                <p><i class="fas fa-eye me-2"></i>文章浏览量</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 详细统计 -->
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- 每日访问趋势 -->
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-bar text-primary me-2"></i>
+                    最近7天访问趋势
+                </h5>
+                <div class="daily-chart">
+                    {% for day in daily_stats %}
+                    <div class="chart-bar">
+                        <div class="bar-visits" style="height: {{ ((day.visits / ([daily_stats|map(attribute='visits')|max, 1]|max)) * 200)|round }}px;">
+                            {% if day.visits > 0 %}
+                            <div class="bar-value">{{ day.visits }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="bar-unique" style="height: {{ ((day.unique / ([daily_stats|map(attribute='unique')|max, 1]|max)) * 100)|round }}px;">
+                            {% if day.unique > 0 %}
+                            <div class="bar-value">{{ day.unique }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="bar-label">{{ day.date }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="row mt-3">
+                    <div class="col-6">
+                        <small><span style="background: #667eea; width: 12px; height: 12px; display: inline-block; border-radius: 2px;"></span> 访问次数</small>
+                    </div>
+                    <div class="col-6">
+                        <small><span style="background: #28a745; width: 12px; height: 12px; display: inline-block; border-radius: 2px;"></span> 独立访客</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 热门页面 -->
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-fire text-danger me-2"></i>
+                    热门页面 (最近7天)
+                </h5>
+                {% if popular_pages %}
+                    {% for page in popular_pages %}
+                    <div class="popular-page-item">
+                        <div class="flex-grow-1">
+                            <a href="{{ page.page_url }}" class="page-url" target="_blank">
+                                {{ page.page_url|truncate(60) }}
+                            </a>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-primary me-2">{{ page.visit_count }} 次访问</span>
+                            <span class="badge bg-success">{{ page.unique_visitors }} 独立访客</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center">暂无热门页面数据</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- 文章统计 -->
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-file-alt text-info me-2"></i>
+                    内容统计
+                </h5>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-success">{{ total_articles }}</h4>
+                        <small class="text-muted">已发布文章</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-warning">{{ total_drafts }}</h4>
+                        <small class="text-muted">草稿文章</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 今日统计 -->
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-calendar-check text-success me-2"></i>
+                    今日统计
+                </h5>
+                <div class="row">
+                    <div class="col-12 mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span>访问次数</span>
+                            <span class="fw-bold text-primary">{{ site_stats.today_visits }}</span>
+                        </div>
+                    </div>
+                    <div class="col-12 mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span>独立访客</span>
+                            <span class="fw-bold text-success">{{ site_stats.today_unique }}</span>
+                        </div>
+                    </div>
+                    <div class="col-12 mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span>本周访问</span>
+                            <span class="fw-bold text-info">{{ site_stats.week_visits }}</span>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between">
+                            <span>本周访客</span>
+                            <span class="fw-bold text-warning">{{ site_stats.week_unique }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 最近访问记录 -->
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-history text-secondary me-2"></i>
+                    最近访问记录
+                </h5>
+                <div style="max-height: 400px; overflow-y: auto;">
+                    {% if recent_visits %}
+                        {% for visit in recent_visits[:10] %}
+                        <div class="visit-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="visit-ip">{{ visit.ip_address }}</div>
+                                    <div class="visit-time mt-1">
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ visit.visit_time.strftime('%Y-%m-%d %H:%M:%S') }}
+                                    </div>
+                                    {% if visit.page_url %}
+                                    <div class="mt-1">
+                                        <a href="{{ visit.page_url }}" class="page-url" target="_blank">
+                                            {{ visit.page_url|truncate(45) }}
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% if recent_visits|length > 10 %}
+                        <div class="text-center mt-2">
+                            <small class="text-muted">还有 {{ recent_visits|length - 10 }} 条访问记录...</small>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-muted text-center">暂无访问记录</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 自动刷新功能（每5分钟）
+    setTimeout(function() {
+        window.location.reload();
+    }, 300000); // 5分钟 = 300000毫秒
+    
+    console.log('访问统计页面已加载');
+});
+</script>
+{% endblock %} 

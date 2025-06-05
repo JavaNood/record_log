@@ -44,6 +44,31 @@
 
 .timeline-item:hover {
     transform: translateX(5px);
+    background: rgba(0, 123, 255, 0.05);
+}
+
+.timeline-item.active {
+    background: rgba(0, 123, 255, 0.1);
+    color: #007bff;
+    transform: translateX(5px);
+    border-left: 3px solid #007bff;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
+}
+
+/* 时间线项目渐入动画 */
+.timeline-item.active {
+    animation: timelineActivate 0.3s ease-out;
+}
+
+@keyframes timelineActivate {
+    0% {
+        background: rgba(0, 123, 255, 0.3);
+        transform: translateX(0);
+    }
+    100% {
+        background: rgba(0, 123, 255, 0.1);
+        transform: translateX(5px);
+    }
 }
 
 .timeline-item::before {
@@ -160,14 +185,33 @@
 .article-title-link:hover::after {
     width: 100%;
 }
+
+/* 搜索关键词高亮样式 */
+.search-highlight {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(255, 193, 7, 0.3);
+}
+
+mark.search-highlight {
+    background-color: #fff3cd;
+    color: #856404;
+    border-radius: 3px;
+    padding: 2px 4px;
+    font-weight: 600;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
 </style>
 {% endblock %}
 
 {% block content %}
 <!-- 欢迎语区域 -->
 <div class="welcome-section">
-    <h1 class="welcome-title">欢迎来到我的个人博客</h1>
-    <p class="welcome-subtitle text-muted">记录生活，分享想法，探索世界</p>
+    <h1 class="welcome-title">{{ welcome_title }}</h1>
+    <p class="welcome-subtitle text-muted">{{ welcome_subtitle|safe }}</p>
 </div>
 
 <div class="row">
@@ -176,6 +220,7 @@
         <div class="timeline-nav">
             <h6 class="mb-3 text-center">
                 <i class="fas fa-clock"></i> 文章时间线
+                <small class="text-muted">({{ timeline_articles|length }}篇)</small>
             </h6>
             
             <!-- 时间范围筛选器 -->
@@ -201,8 +246,8 @@
                 </div>
             </div>
             
-            {% if articles and articles.items %}
-                {% for article in articles.items %}
+            {% if timeline_articles %}
+                {% for article in timeline_articles %}
                 <div class="timeline-item" data-article-id="article-{{ article.id }}">
                     <div class="timeline-date">
                         {{ article.created_at.strftime('%m月%d日') }}
@@ -214,17 +259,21 @@
                         {% if article.permission == 'verify' %}
                             <i class="fas fa-lock text-secondary me-1"></i>
                         {% endif %}
-                        <a href="{{ url_for('frontend.article_detail', article_id=article.id) }}" 
-                           class="text-decoration-none text-dark article-title-link">
-                            {{ article.title[:20] }}{% if article.title|length > 20 %}...{% endif %}
-                        </a>
+                        <span class="text-dark article-title-link">
+                            {% if search_query %}
+                                {% set short_title = article.title[:20] + '...' if article.title|length > 20 else article.title %}
+                                {{ short_title | highlight_search(search_query) | safe }}
+                            {% else %}
+                                {{ article.title[:20] }}{% if article.title|length > 20 %}...{% endif %}
+                            {% endif %}
+                        </span>
                     </div>
                 </div>
                 {% endfor %}
             {% else %}
                 <div class="text-center text-muted">
                     <i class="fas fa-file-alt fa-2x mb-2"></i>
-                    <p class="small">{{ '该时间范围内暂无文章' if time_range != 'all' else '暂无文章' }}</p>
+                    <p class="small">暂无文章</p>
                 </div>
             {% endif %}
         </div>
@@ -247,7 +296,11 @@
                             {% endif %}
                             <a href="{{ url_for('frontend.article_detail', article_id=article.id) }}" 
                                class="text-decoration-none text-dark article-title-link">
-                                {{ article.title }}
+                                {% if search_query %}
+                                    {{ article.title | highlight_search(search_query) | safe }}
+                                {% else %}
+                                    {{ article.title }}
+                                {% endif %}
                             </a>
                         </h5>
                         <!-- 文章权限标识 -->
@@ -294,7 +347,11 @@
                 <ul class="pagination justify-content-center">
                     {% if articles.has_prev %}
                         <li class="page-item">
-                            <a class="page-link" href="{{ url_for('frontend.index', page=articles.prev_num) }}" aria-label="上一页">
+                            {% if search_query %}
+                                <a class="page-link" href="{{ url_for('frontend.search', page=articles.prev_num, q=search_query, range=time_range, date=custom_date, tag=tag_filter, permission=permission_filter) }}" aria-label="上一页">
+                            {% else %}
+                                <a class="page-link" href="{{ url_for('frontend.index', page=articles.prev_num, range=time_range, date=custom_date, tag=tag_filter, permission=permission_filter) }}" aria-label="上一页">
+                            {% endif %}
                                 <span aria-hidden="true">&laquo;</span>
                             </a>
                         </li>
@@ -304,7 +361,11 @@
                         {% if page_num %}
                             {% if page_num != articles.page %}
                                 <li class="page-item">
-                                    <a class="page-link" href="{{ url_for('frontend.index', page=page_num) }}">{{ page_num }}</a>
+                                    {% if search_query %}
+                                        <a class="page-link" href="{{ url_for('frontend.search', page=page_num, q=search_query, range=time_range, date=custom_date, tag=tag_filter, permission=permission_filter) }}">{{ page_num }}</a>
+                                    {% else %}
+                                        <a class="page-link" href="{{ url_for('frontend.index', page=page_num, range=time_range, date=custom_date, tag=tag_filter, permission=permission_filter) }}">{{ page_num }}</a>
+                                    {% endif %}
                                 </li>
                             {% else %}
                                 <li class="page-item active">
@@ -320,7 +381,11 @@
                     
                     {% if articles.has_next %}
                         <li class="page-item">
-                            <a class="page-link" href="{{ url_for('frontend.index', page=articles.next_num) }}" aria-label="下一页">
+                            {% if search_query %}
+                                <a class="page-link" href="{{ url_for('frontend.search', page=articles.next_num, q=search_query, range=time_range, date=custom_date, tag=tag_filter, permission=permission_filter) }}" aria-label="下一页">
+                            {% else %}
+                                <a class="page-link" href="{{ url_for('frontend.index', page=articles.next_num, range=time_range, date=custom_date, tag=tag_filter, permission=permission_filter) }}" aria-label="下一页">
+                            {% endif %}
                                 <span aria-hidden="true">&raquo;</span>
                             </a>
                         </li>
@@ -379,8 +444,15 @@
                 <!-- 当前搜索状态显示 -->
                 {% if search_query %}
                 <div class="alert alert-info alert-sm mb-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small>搜索: "{{ search_query }}"</small>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <small><strong>搜索:</strong> "{{ search_query }}"</small>
+                            {% if articles and articles.total > 0 %}
+                            <br><small class="text-muted">找到 {{ articles.total }} 篇相关文章</small>
+                            {% else %}
+                            <br><small class="text-muted">未找到相关文章</small>
+                            {% endif %}
+                        </div>
                         <a href="{{ url_for('frontend.index') }}" class="btn btn-outline-secondary btn-sm">
                             <i class="fas fa-times"></i> 清除
                         </a>
@@ -405,9 +477,10 @@
                     
                     <div class="input-group">
                         <input type="text" class="form-control" name="q" 
-                               placeholder="输入文章标题..." 
+                               placeholder="搜索文章标题..." 
                                value="{{ search_query or '' }}"
-                               maxlength="100">
+                               maxlength="100"
+                               autocomplete="off">
                         <button class="btn btn-primary" type="submit">
                             <i class="fas fa-search"></i>
                         </button>
@@ -460,6 +533,8 @@
                 </div>
             </div>
         </div>
+
+
         
         <!-- Top文章 -->
         <div class="card mb-4">
@@ -507,16 +582,8 @@
                         </div>
                     </div>
                     <div class="col-6">
-                        <h6 class="text-success mb-1">
-                            {% set total_views = 0 %}
-                            {% if top_articles %}
-                                {% for article in top_articles %}
-                                    {% set total_views = total_views + article.view_count %}
-                                {% endfor %}
-                            {% endif %}
-                            {{ total_views }}
-                        </h6>
-                        <small class="text-muted">热门浏览</small>
+                        <h6 class="text-success mb-1">{{ total_views or 0 }}</h6>
+                        <small class="text-muted">总浏览量</small>
                     </div>
                 </div>
             </div>
@@ -625,56 +692,82 @@ document.addEventListener('DOMContentLoaded', function() {
     const timelineItems = document.querySelectorAll('.timeline-item');
     const articleCards = document.querySelectorAll('.article-card');
     
-    // 时间线点击跳转功能
+    // 时间线跨页面跳转功能
     timelineItems.forEach(item => {
         item.addEventListener('click', function() {
             const targetId = this.getAttribute('data-article-id');
             const targetElement = document.getElementById(targetId);
             
             if (targetElement) {
-                // 移除所有活动状态
+                // 文章在当前页面，直接滚动定位
                 timelineItems.forEach(ti => ti.classList.remove('active'));
                 articleCards.forEach(ac => ac.classList.remove('highlighted'));
                 
-                // 添加活动状态
                 this.classList.add('active');
                 targetElement.classList.add('highlighted');
                 
-                // 平滑滚动到目标文章
+                // 滚动时间线确保点击的项目在可视区域（强制滚动）
+                scrollTimelineToItem(this, { forceScroll: true });
+                
                 targetElement.scrollIntoView({
                     behavior: 'smooth',
                     block: 'start'
                 });
                 
-                // 3秒后移除高亮
                 setTimeout(() => {
                     targetElement.classList.remove('highlighted');
                 }, 3000);
+            } else {
+                // 文章不在当前页面，需要跨页面跳转
+                // 激活点击的时间线项目
+                timelineItems.forEach(ti => ti.classList.remove('active'));
+                this.classList.add('active');
+                // 滚动时间线确保点击的项目在可视区域（强制滚动）
+                scrollTimelineToItem(this, { forceScroll: true });
+                
+                const articleIdNum = parseInt(targetId.replace('article-', ''));
+                navigateToArticlePage(articleIdNum, targetId);
             }
         });
     });
     
-    // 滚动时更新时间线活动状态
+    // 优化的滚动时间线状态更新
     let ticking = false;
+    let lastActiveIndex = -1;
+    
     function updateTimelineOnScroll() {
         if (!ticking) {
             requestAnimationFrame(() => {
                 const scrollPosition = window.scrollY + 150;
+                let currentActiveIndex = -1;
                 
+                // 找到当前可视区域的文章
                 articleCards.forEach((card, index) => {
                     const cardTop = card.offsetTop;
                     const cardBottom = cardTop + card.offsetHeight;
                     
                     if (scrollPosition >= cardTop && scrollPosition <= cardBottom) {
-                        // 移除所有活动状态
-                        timelineItems.forEach(ti => ti.classList.remove('active'));
-                        
-                        // 添加当前文章对应的时间线活动状态
-                        if (timelineItems[index]) {
-                            timelineItems[index].classList.add('active');
-                        }
+                        currentActiveIndex = index;
                     }
                 });
+                
+                // 只有当活动状态改变时才更新时间线
+                if (currentActiveIndex !== lastActiveIndex && currentActiveIndex !== -1) {
+                    // 移除所有活动状态
+                    timelineItems.forEach(ti => ti.classList.remove('active'));
+                    
+                    // 添加当前文章对应的时间线活动状态
+                    if (timelineItems[currentActiveIndex]) {
+                        timelineItems[currentActiveIndex].classList.add('active');
+                        
+                        // 智能同步时间线位置（不强制滚动）
+                        scrollTimelineToItem(timelineItems[currentActiveIndex], { 
+                            forceScroll: false 
+                        });
+                    }
+                    
+                    lastActiveIndex = currentActiveIndex;
+                }
                 
                 ticking = false;
             });
@@ -683,6 +776,224 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     window.addEventListener('scroll', updateTimelineOnScroll);
+
+    // 页面加载后检查锚点定位
+    function checkPageAnchor() {
+        const hash = window.location.hash;
+        if (hash && hash.startsWith('#article-')) {
+            const targetElement = document.getElementById(hash.substring(1));
+            if (targetElement) {
+                // 延迟一点确保页面完全加载
+                setTimeout(() => {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                    
+                    // 高亮目标文章
+                    targetElement.classList.add('highlighted');
+                    setTimeout(() => {
+                        targetElement.classList.remove('highlighted');
+                    }, 3000);
+                    
+                    // 激活对应的时间线项目并滚动到位置
+                    const timelineItems = document.querySelectorAll('.timeline-item');
+                    timelineItems.forEach(item => {
+                        if (item.getAttribute('data-article-id') === hash.substring(1)) {
+                            item.classList.add('active');
+                            // 滚动时间线到对应位置（强制滚动）
+                            scrollTimelineToItem(item, { forceScroll: true });
+                        }
+                    });
+                }, 500);
+            }
+        }
+    }
+
+    // 智能滚动时间线到指定项目位置
+    function scrollTimelineToItem(targetItem, options = {}) {
+        const timelineContainer = document.querySelector('.timeline-nav');
+        if (!timelineContainer || !targetItem) return;
+        
+        // 立即执行，不需要延迟
+        const containerRect = timelineContainer.getBoundingClientRect();
+        const itemRect = targetItem.getBoundingClientRect();
+        
+        // 更精确的可视区域检测（考虑一定的边距）
+        const margin = 20; // 20px边距
+        const isItemFullyVisible = (
+            itemRect.top >= (containerRect.top + margin) &&
+            itemRect.bottom <= (containerRect.bottom - margin)
+        );
+        
+        if (isItemFullyVisible && !options.forceScroll) {
+            console.log('目标项目已在可视区域内，无需滚动');
+            return;
+        }
+        
+        // 计算滚动距离
+        const containerHeight = containerRect.height;
+        const itemOffsetTop = targetItem.offsetTop;
+        const currentScrollTop = timelineContainer.scrollTop;
+        const targetScrollTop = itemOffsetTop - (containerHeight / 3); // 显示在上1/3位置
+        const scrollDistance = Math.abs(targetScrollTop - currentScrollTop);
+        
+        // 智能滚动策略
+        const SMOOTH_SCROLL_THRESHOLD = 300; // 300px以内使用平滑滚动
+        const INSTANT_SCROLL_THRESHOLD = 1000; // 1000px以上直接跳转
+        
+        let scrollBehavior = 'smooth';
+        let scrollDuration = 'normal';
+        
+        if (scrollDistance > INSTANT_SCROLL_THRESHOLD) {
+            // 距离太远，直接跳转
+            scrollBehavior = 'instant';
+            console.log(`距离过远(${scrollDistance}px)，使用瞬间跳转`);
+        } else if (scrollDistance > SMOOTH_SCROLL_THRESHOLD) {
+            // 中等距离，使用快速滚动
+            scrollBehavior = 'smooth';
+            console.log(`中等距离(${scrollDistance}px)，使用快速滚动`);
+        } else {
+            // 短距离，使用正常平滑滚动
+            console.log(`短距离(${scrollDistance}px)，使用平滑滚动`);
+        }
+        
+        // 执行滚动
+        timelineContainer.scrollTo({
+            top: Math.max(0, targetScrollTop),
+            behavior: scrollBehavior
+        });
+        
+        // 如果是快速滚动，添加一个临时的CSS动画来控制速度
+        if (scrollDistance > SMOOTH_SCROLL_THRESHOLD && scrollDistance <= INSTANT_SCROLL_THRESHOLD) {
+            timelineContainer.style.scrollBehavior = 'auto';
+            
+            // 使用自定义动画实现快速滚动
+            const startTime = performance.now();
+            const startScrollTop = currentScrollTop;
+            const targetScroll = Math.max(0, targetScrollTop);
+            const distance = targetScroll - startScrollTop;
+            const duration = Math.min(500, scrollDistance / 2); // 最多500ms，根据距离调整
+            
+            function animateScroll(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // 使用缓动函数
+                const easeProgress = easeOutCubic(progress);
+                const currentPosition = startScrollTop + (distance * easeProgress);
+                
+                timelineContainer.scrollTop = currentPosition;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animateScroll);
+                } else {
+                    // 恢复正常滚动行为
+                    timelineContainer.style.scrollBehavior = '';
+                }
+            }
+            
+            requestAnimationFrame(animateScroll);
+        }
+        
+        console.log('时间线滚动执行完成，文章:', targetItem.getAttribute('data-article-id'));
+    }
+    
+    // 缓动函数：平滑的减速效果
+    function easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+    }
+
+    // 页面加载完成后检查锚点
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkPageAnchor);
+    } else {
+        checkPageAnchor();
+    }
+
+    // 跨页面导航到指定文章
+    function navigateToArticlePage(articleId, targetId) {
+        // 构建URL，包含搜索和筛选参数
+        const currentUrl = new URL(window.location);
+        const params = new URLSearchParams(currentUrl.search);
+        
+        // 计算文章应该在第几页（每页10篇文章）
+        const articlesPerPage = 10;
+        
+        // 获取时间线中的文章列表来计算页数
+        const timelineItems = document.querySelectorAll('.timeline-item');
+        let articleIndex = -1;
+        
+        // 找到文章在时间线中的位置
+        timelineItems.forEach((item, index) => {
+            if (item.getAttribute('data-article-id') === targetId) {
+                articleIndex = index;
+            }
+        });
+        
+        if (articleIndex !== -1) {
+            // 计算目标页数（从1开始）
+            const targetPage = Math.floor(articleIndex / articlesPerPage) + 1;
+            
+            // 设置页码参数
+            if (targetPage > 1) {
+                params.set('page', targetPage);
+            } else {
+                params.delete('page');
+            }
+            
+            // 构建新URL
+            let newUrl = currentUrl.pathname;
+            if (params.toString()) {
+                newUrl += '?' + params.toString();
+            }
+            newUrl += '#' + targetId;
+            
+            // 跳转到目标页面
+            window.location.href = newUrl;
+        } else {
+            // 如果找不到文章位置，直接跳转到首页搜索
+            const searchUrl = new URL('{{ url_for("frontend.index") }}', window.location.origin);
+            searchUrl.hash = targetId;
+            window.location.href = searchUrl.toString();
+        }
+    }
+
+    // 搜索框快捷键支持
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+K 或 Cmd+K 聚焦搜索框
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            const searchInput = document.querySelector('input[name="q"]');
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+            }
+        }
+        
+        // ESC 清空搜索框
+        if (e.key === 'Escape') {
+            const searchInput = document.querySelector('input[name="q"]');
+            if (searchInput && document.activeElement === searchInput) {
+                searchInput.value = '';
+            }
+        }
+    });
+
+    // 搜索框增强功能
+    const searchInput = document.querySelector('input[name="q"]');
+    if (searchInput) {
+        // 添加快捷键提示
+        searchInput.setAttribute('title', '快捷键：Ctrl+K 聚焦，ESC 清空');
+        
+        // Enter 键提交搜索
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.closest('form').submit();
+            }
+        });
+    }
     
     // 标签筛选功能
     const tagFilterBtns = document.querySelectorAll('.tag-filter-btn');
@@ -702,6 +1013,37 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    // 时间筛选功能
+    const timeFilterBtns = document.querySelectorAll('.time-filter-btn');
+    timeFilterBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const timeValue = this.getAttribute('data-time');
+            applyFilter('time', timeValue);
+        });
+    });
+    
+    // 键盘快捷键支持筛选
+    document.addEventListener('keydown', function(e) {
+        // Alt + 数字键快速筛选
+        if (e.altKey && !e.ctrlKey && !e.metaKey) {
+            switch(e.key) {
+                case '1':
+                    e.preventDefault();
+                    applyFilter('permission', 'all');
+                    break;
+                case '2':
+                    e.preventDefault();
+                    applyFilter('permission', 'public');
+                    break;
+                case '3':
+                    e.preventDefault();
+                    applyFilter('permission', 'verify');
+                    break;
+
+            }
+        }
+    });
+    
     // 热门文章点击跳转功能
     const hotArticleItems = document.querySelectorAll('.hot-article-item');
     hotArticleItems.forEach(item => {
@@ -717,10 +1059,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 // 添加活动状态
                 targetElement.classList.add('highlighted');
                 
-                // 找到对应的时间线项目并激活
+                // 找到对应的时间线项目并激活，并滚动时间线
                 timelineItems.forEach(timelineItem => {
                     if (timelineItem.getAttribute('data-article-id') === targetId) {
                         timelineItem.classList.add('active');
+                        // 滚动时间线到对应位置（强制滚动）
+                        scrollTimelineToItem(timelineItem, { forceScroll: true });
                     }
                 });
                 
@@ -735,13 +1079,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     targetElement.classList.remove('highlighted');
                 }, 3000);
             } else {
-                // 如果当前页面没有这篇文章，跳转到首页并定位
-                window.location.href = `{{ url_for('frontend.index') }}#${targetId}`;
+                // 如果当前页面没有这篇文章，使用跨页面跳转
+                const articleIdNum = parseInt(targetId.replace('article-', ''));
+                navigateToArticlePage(articleIdNum, targetId);
             }
         });
     });
     
+    // 增强的筛选功能 - 支持组合筛选和优化体验
     function applyFilter(filterType, filterValue) {
+        // 显示加载状态
+        showFilterLoading(filterType, filterValue);
+        
         const currentUrl = new URL(window.location);
         
         if (filterType === 'tag') {
@@ -756,14 +1105,43 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 currentUrl.searchParams.set('permission', filterValue);
             }
+        } else if (filterType === 'time') {
+            if (filterValue === 'all') {
+                currentUrl.searchParams.delete('range');
+                currentUrl.searchParams.delete('date');
+            } else {
+                currentUrl.searchParams.set('range', filterValue);
+            }
         }
         
-        // 重置页码
+        // 重置页码（筛选时回到第一页）
         currentUrl.searchParams.delete('page');
         
-        // 跳转到新URL
+        // 平滑跳转
         window.location.href = currentUrl.toString();
     }
+    
+    // 显示筛选加载状态
+    function showFilterLoading(filterType, filterValue) {
+        const buttons = document.querySelectorAll(`.${filterType}-filter-btn`);
+        buttons.forEach(btn => {
+            if (btn.getAttribute(`data-${filterType}`) === filterValue) {
+                const originalContent = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 筛选中...';
+                btn.disabled = true;
+                
+                // 防止用户快速点击
+                setTimeout(() => {
+                    if (btn.innerHTML.includes('spinner')) {
+                        btn.innerHTML = originalContent;
+                        btn.disabled = false;
+                    }
+                }, 3000);
+            }
+        });
+    }
+    
+
 });
 </script>
 {% endblock %} 

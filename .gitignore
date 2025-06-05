@@ -25,22 +25,73 @@ venv/
 env/
 ENV/
 
-# Django
+# Database
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-media/
+*.db
+*.sql
 
-# Environment variables
+# Environment variables and secrets
 .env
+.env.local
+.env.production
+.env.staging
+config_secret.py
+config_dev.py
+secrets.py
+
+# SSL certificates and keys
+*.crt
+*.key
+*.pem
+*.cert
+*.p12
+
+# Upload directories with sensitive content
+static/images/uploads/*
+static/uploads/*
+uploads/*
+!static/images/uploads/.gitkeep
+!static/uploads/.gitkeep
+
+# Logs
+logs/*.log
+logs/*.out
+logs/*.pid
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+.sublime-project
+.sublime-workspace
 
 # OS
 .DS_Store
-Thumbs.db 
+Thumbs.db
+desktop.ini
+
+# Production deployment files with secrets
+production_config.py
+.production_env
+
+# Nginx and system config files with sensitive info
+nginx_production.conf
+supervisor_production.conf
+
+# Development environment check script (contains database info)
+check_db.py
+
+# Background images (may contain personal content)
+static/images/backgrounds/*
+!static/images/backgrounds/.gitkeep 

@@ -7,8 +7,9 @@ from datetime import datetime, timedelta
 import re
 import markdown
 from . import frontend
-from ..models import Article, Tag
+from ..models import Article, Tag, Config
 from .. import db
+from sqlalchemy.orm import joinedload
 
 
 def parse_custom_date(date_str):
@@ -99,7 +100,8 @@ def index():
         query = query.filter(Article.permission == 'verify')
     
     # 获取已发布的文章列表，按置顶和时间排序
-    articles = query.order_by(
+    # 优化：预加载标签关联以减少N+1查询
+    articles = query.options(joinedload(Article.tags)).order_by(
         Article.is_top.desc(),  # 置顶文章优先
         Article.created_at.desc()  # 然后按创建时间倒序
     ).paginate(
@@ -116,6 +118,24 @@ def index():
         Article.view_count.desc()
     ).limit(5).all()
     
+    # 获取时间线文章（不受分页限制，用于导航）
+    timeline_articles = Article.query.filter_by(status='published').order_by(
+        Article.is_top.desc(),
+        Article.created_at.desc()
+    ).limit(50).all()
+    
+    # 获取欢迎语配置
+    welcome_title = Config.get_value('homepage_welcome_title', '欢迎来到我的个人博客')
+    welcome_subtitle = Config.get_value('homepage_welcome_subtitle', '记录生活，分享想法，探索世界')
+    
+    # 计算所有已发布文章的总浏览量
+    from sqlalchemy import func
+    total_views = db.session.query(func.sum(Article.view_count)).filter_by(status='published').scalar() or 0
+    
+    # 获取背景图片配置
+    background_image = Config.get_value('background_image', '')
+    background_fit_mode = Config.get_value('background_fit_mode', 'cover')
+    
     return render_template(
         'frontend/index.html', 
         articles=articles, 
@@ -124,7 +144,13 @@ def index():
         tag_filter=tag_filter,
         permission_filter=permission_filter,
         all_tags=all_tags,
-        top_articles=top_articles
+        top_articles=top_articles,
+        timeline_articles=timeline_articles,
+        welcome_title=welcome_title,
+        welcome_subtitle=welcome_subtitle,
+        background_image=background_image,
+        background_fit_mode=background_fit_mode,
+        total_views=total_views
     )
 
 
@@ -189,10 +215,8 @@ def search():
         base_query = base_query.filter(Article.permission == 'verify')
     
     if query:
-        # 按标题搜索已发布的文章
-        articles = base_query.filter(
-            Article.title.contains(query)
-        ).order_by(
+        # 简化搜索：单关键词标题搜索，优化：预加载标签关联
+        articles = base_query.options(joinedload(Article.tags)).filter(Article.title.contains(query)).order_by(
             Article.is_top.desc(),
             Article.created_at.desc()
         ).paginate(
@@ -201,8 +225,8 @@ def search():
             error_out=False
         )
     else:
-        # 如果没有搜索词，返回所有已发布文章（带所有筛选）
-        articles = base_query.order_by(
+        # 如果没有搜索词，返回所有已发布文章（带所有筛选），优化：预加载标签关联
+        articles = base_query.options(joinedload(Article.tags)).order_by(
             Article.is_top.desc(),
             Article.created_at.desc()
         ).paginate(
@@ -219,6 +243,24 @@ def search():
         Article.view_count.desc()
     ).limit(5).all()
     
+    # 获取时间线文章（不受分页限制，用于导航）
+    timeline_articles = Article.query.filter_by(status='published').order_by(
+        Article.is_top.desc(),
+        Article.created_at.desc()
+    ).limit(50).all()
+    
+    # 获取欢迎语配置
+    welcome_title = Config.get_value('homepage_welcome_title', '欢迎来到我的个人博客')
+    welcome_subtitle = Config.get_value('homepage_welcome_subtitle', '记录生活，分享想法，探索世界')
+    
+    # 计算所有已发布文章的总浏览量
+    from sqlalchemy import func
+    total_views = db.session.query(func.sum(Article.view_count)).filter_by(status='published').scalar() or 0
+    
+    # 获取背景图片配置
+    background_image = Config.get_value('background_image', '')
+    background_fit_mode = Config.get_value('background_fit_mode', 'cover')
+    
     return render_template(
         'frontend/index.html', 
         articles=articles, 
@@ -228,7 +270,13 @@ def search():
         tag_filter=tag_filter,
         permission_filter=permission_filter,
         all_tags=all_tags,
-        top_articles=top_articles
+        top_articles=top_articles,
+        timeline_articles=timeline_articles,
+        welcome_title=welcome_title,
+        welcome_subtitle=welcome_subtitle,
+        background_image=background_image,
+        background_fit_mode=background_fit_mode,
+        total_views=total_views
     )
 
 
@@ -387,4 +435,30 @@ def is_verified_filter(article_id):
     for verified_id in verified_articles:
         if int(verified_id) == int(article_id):
             return True
-    return False 
+    return False
+
+
+# 添加搜索关键词高亮过滤器
+@frontend.app_template_filter('highlight_search')
+def highlight_search_filter(text, search_query):
+    """高亮显示搜索关键词"""
+    if not search_query or not text:
+        return text
+    
+    import re
+    from markupsafe import Markup
+    
+    # 将搜索词按空格分割
+    search_terms = search_query.split()
+    highlighted_text = text
+    
+    for term in search_terms:
+        if term.strip():
+            # 忽略大小写的正则匹配
+            pattern = re.compile(re.escape(term), re.IGNORECASE)
+            highlighted_text = pattern.sub(
+                f'<mark class="search-highlight">{term}</mark>', 
+                highlighted_text
+            )
+    
+    return Markup(highlighted_text) 

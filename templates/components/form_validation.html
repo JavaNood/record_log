@@ -1,0 +1,327 @@
+<!-- 表单验证增强组件 -->
+
+<style>
+/* 表单验证样式 */
+.form-control.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.form-control.is-valid {
+    border-color: #198754;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+.invalid-feedback {
+    display: block;
+    font-size: 0.875rem;
+    color: #dc3545;
+    margin-top: 0.25rem;
+}
+
+.valid-feedback {
+    display: block;
+    font-size: 0.875rem;
+    color: #198754;
+    margin-top: 0.25rem;
+}
+
+.form-validation-icon {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 5;
+    font-size: 1rem;
+}
+
+.form-group {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.form-control:focus + .form-validation-icon {
+    opacity: 0.7;
+}
+
+.password-strength {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.password-strength-bar {
+    height: 4px;
+    border-radius: 2px;
+    background-color: #e9ecef;
+    overflow: hidden;
+    margin-top: 0.25rem;
+}
+
+.password-strength-fill {
+    height: 100%;
+    transition: all 0.3s ease;
+    border-radius: 2px;
+}
+
+.strength-weak { background-color: #dc3545; width: 25%; }
+.strength-fair { background-color: #fd7e14; width: 50%; }
+.strength-good { background-color: #ffc107; width: 75%; }
+.strength-strong { background-color: #198754; width: 100%; }
+</style>
+
+<script>
+// 表单验证增强功能
+document.addEventListener('DOMContentLoaded', function() {
+    enhanceFormValidation();
+});
+
+function enhanceFormValidation() {
+    const forms = document.querySelectorAll('form');
+    
+    forms.forEach(form => {
+        // 为表单添加novalidate属性，使用自定义验证
+        form.setAttribute('novalidate', '');
+        
+        // 为所有input字段添加验证监听器
+        const inputs = form.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+            // 实时验证
+            input.addEventListener('blur', () => validateField(input));
+            input.addEventListener('input', () => {
+                if (input.classList.contains('is-invalid') || input.classList.contains('is-valid')) {
+                    validateField(input);
+                }
+            });
+            
+            // 密码强度检查
+            if (input.type === 'password' && input.name.includes('password')) {
+                addPasswordStrengthIndicator(input);
+            }
+        });
+        
+        // 表单提交验证
+        form.addEventListener('submit', function(e) {
+            let isValid = true;
+            
+            inputs.forEach(input => {
+                if (!validateField(input)) {
+                    isValid = false;
+                }
+            });
+            
+            if (!isValid) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // 滚动到第一个错误字段
+                const firstInvalid = form.querySelector('.is-invalid');
+                if (firstInvalid) {
+                    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    firstInvalid.focus();
+                }
+                
+                showError('请修正表单中的错误后再提交');
+            }
+        });
+    });
+}
+
+function validateField(input) {
+    const value = input.value.trim();
+    let isValid = true;
+    let message = '';
+    
+    // 移除现有的验证状态
+    input.classList.remove('is-valid', 'is-invalid');
+    removeValidationFeedback(input);
+    
+    // 必填验证
+    if (input.hasAttribute('required') && !value) {
+        isValid = false;
+        message = getFieldLabel(input) + '不能为空';
+    }
+    
+    // 特定字段验证
+    if (isValid && value) {
+        switch (input.type) {
+            case 'email':
+                if (!isValidEmail(value)) {
+                    isValid = false;
+                    message = '请输入有效的邮箱地址';
+                }
+                break;
+                
+            case 'password':
+                if (input.name.includes('password')) {
+                    const minLength = input.getAttribute('minlength') || 6;
+                    if (value.length < minLength) {
+                        isValid = false;
+                        message = `密码长度至少${minLength}位`;
+                    }
+                }
+                break;
+                
+            case 'number':
+                const min = input.getAttribute('min');
+                const max = input.getAttribute('max');
+                const numValue = parseInt(value);
+                
+                if (isNaN(numValue)) {
+                    isValid = false;
+                    message = '请输入有效的数字';
+                } else if (min && numValue < parseInt(min)) {
+                    isValid = false;
+                    message = `值不能小于${min}`;
+                } else if (max && numValue > parseInt(max)) {
+                    isValid = false;
+                    message = `值不能大于${max}`;
+                }
+                break;
+        }
+        
+        // 长度验证
+        const maxLength = input.getAttribute('maxlength');
+        if (maxLength && value.length > parseInt(maxLength)) {
+            isValid = false;
+            message = `输入内容不能超过${maxLength}个字符`;
+        }
+    }
+    
+    // 密码确认验证
+    if (input.name === 'confirm_password') {
+        const passwordField = input.form.querySelector('input[name="new_password"], input[name="password"]');
+        if (passwordField && value !== passwordField.value) {
+            isValid = false;
+            message = '两次输入的密码不一致';
+        }
+    }
+    
+    // 应用验证结果
+    if (isValid) {
+        input.classList.add('is-valid');
+        addValidationIcon(input, 'check');
+        if (value) {
+            addValidationFeedback(input, '输入正确', 'valid');
+        }
+    } else {
+        input.classList.add('is-invalid');
+        addValidationIcon(input, 'times');
+        addValidationFeedback(input, message, 'invalid');
+    }
+    
+    return isValid;
+}
+
+function addValidationIcon(input, iconType) {
+    removeValidationIcon(input);
+    
+    const icon = document.createElement('i');
+    icon.className = `fas fa-${iconType} form-validation-icon`;
+    icon.style.color = iconType === 'check' ? '#198754' : '#dc3545';
+    
+    const formGroup = input.closest('.form-group') || input.parentElement;
+    formGroup.style.position = 'relative';
+    formGroup.appendChild(icon);
+}
+
+function removeValidationIcon(input) {
+    const formGroup = input.closest('.form-group') || input.parentElement;
+    const existingIcon = formGroup.querySelector('.form-validation-icon');
+    if (existingIcon) {
+        existingIcon.remove();
+    }
+}
+
+function addValidationFeedback(input, message, type) {
+    const feedback = document.createElement('div');
+    feedback.className = `${type}-feedback`;
+    feedback.textContent = message;
+    
+    const formGroup = input.closest('.form-group') || input.parentElement;
+    formGroup.appendChild(feedback);
+}
+
+function removeValidationFeedback(input) {
+    const formGroup = input.closest('.form-group') || input.parentElement;
+    const feedbacks = formGroup.querySelectorAll('.valid-feedback, .invalid-feedback');
+    feedbacks.forEach(feedback => feedback.remove());
+}
+
+function getFieldLabel(input) {
+    const label = input.form.querySelector(`label[for="${input.id}"]`);
+    if (label) {
+        return label.textContent.replace('*', '').trim();
+    }
+    return input.getAttribute('placeholder') || '此字段';
+}
+
+function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+function addPasswordStrengthIndicator(passwordInput) {
+    if (passwordInput.name === 'current_password') return; // 跳过当前密码
+    
+    const formGroup = passwordInput.closest('.form-group') || passwordInput.parentElement;
+    
+    const strengthContainer = document.createElement('div');
+    strengthContainer.className = 'password-strength';
+    strengthContainer.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center">
+            <span class="strength-text">密码强度：<span class="strength-level">请输入密码</span></span>
+        </div>
+        <div class="password-strength-bar">
+            <div class="password-strength-fill"></div>
+        </div>
+    `;
+    
+    formGroup.appendChild(strengthContainer);
+    
+    passwordInput.addEventListener('input', function() {
+        updatePasswordStrength(this, strengthContainer);
+    });
+}
+
+function updatePasswordStrength(passwordInput, strengthContainer) {
+    const password = passwordInput.value;
+    const strengthFill = strengthContainer.querySelector('.password-strength-fill');
+    const strengthLevel = strengthContainer.querySelector('.strength-level');
+    
+    if (!password) {
+        strengthFill.className = 'password-strength-fill';
+        strengthLevel.textContent = '请输入密码';
+        return;
+    }
+    
+    let score = 0;
+    let feedback = '';
+    
+    // 长度检查
+    if (password.length >= 8) score += 1;
+    if (password.length >= 12) score += 1;
+    
+    // 字符类型检查
+    if (/[a-z]/.test(password)) score += 1;
+    if (/[A-Z]/.test(password)) score += 1;
+    if (/\d/.test(password)) score += 1;
+    if (/[^a-zA-Z\d]/.test(password)) score += 1;
+    
+    // 确定强度等级
+    if (score <= 2) {
+        strengthFill.className = 'password-strength-fill strength-weak';
+        feedback = '弱';
+    } else if (score <= 3) {
+        strengthFill.className = 'password-strength-fill strength-fair';
+        feedback = '一般';
+    } else if (score <= 4) {
+        strengthFill.className = 'password-strength-fill strength-good';
+        feedback = '良好';
+    } else {
+        strengthFill.className = 'password-strength-fill strength-strong';
+        feedback = '强';
+    }
+    
+    strengthLevel.textContent = feedback;
+}
+</script> 
