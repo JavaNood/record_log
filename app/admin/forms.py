@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField, SelectField, IntegerField
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField, SelectField, IntegerField, SelectMultipleField
 from wtforms.validators import DataRequired, Length, Optional, NumberRange
+from wtforms.widgets import CheckboxInput, ListWidget
 
 
 class LoginForm(FlaskForm):
@@ -37,6 +38,14 @@ class LoginForm(FlaskForm):
     )
 
 
+class MultiCheckboxField(SelectMultipleField):
+    """
+    多选框字段，用于标签选择
+    """
+    widget = ListWidget(prefix_label=False)
+    option_widget = CheckboxInput()
+
+
 class ArticleEditForm(FlaskForm):
     """文章编辑表单"""
     title = StringField('文章标题', validators=[
@@ -56,6 +65,14 @@ class ArticleEditForm(FlaskForm):
         'rows': 20,
         'placeholder': '请输入文章内容，支持Markdown格式...'
     })
+    
+    # 标签选择字段
+    tags = MultiCheckboxField(
+        '文章标签',
+        coerce=int,
+        validators=[Optional()],
+        description='选择文章相关的标签'
+    )
     
     permission = SelectField(
         '文章权限',

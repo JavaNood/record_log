@@ -149,6 +149,10 @@ def new_article():
     """新建文章页面"""
     form = ArticleEditForm()
     
+    # 设置标签选择项
+    all_tags = Tag.query.order_by(Tag.name).all()
+    form.tags.choices = [(tag.id, tag.name) for tag in all_tags]
+    
     if form.validate_on_submit():
         # 验证权限相关字段
         if form.permission.data == 'verify':
@@ -158,6 +162,7 @@ def new_article():
                                      form=form,
                                      article=None,
                                      is_new=True,
+                                     all_tags=all_tags,
                                      current_admin=get_current_admin(),
                                      session_info=get_session_info())
         
@@ -175,6 +180,12 @@ def new_article():
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow()
             )
+            
+            # 处理标签关联
+            selected_tag_ids = form.tags.data
+            if selected_tag_ids:
+                selected_tags = Tag.query.filter(Tag.id.in_(selected_tag_ids)).all()
+                article.tags = selected_tags
             
             db.session.add(article)
             db.session.commit()
@@ -195,6 +206,7 @@ def new_article():
                          form=form,
                          article=None,  # 新建文章时没有现有文章
                          is_new=True,
+                         all_tags=all_tags,
                          current_admin=current_admin,
                          session_info=session_info)
 
@@ -206,6 +218,10 @@ def edit_article(article_id):
     article = Article.query.get_or_404(article_id)
     form = ArticleEditForm()
     
+    # 设置标签选择项
+    all_tags = Tag.query.order_by(Tag.name).all()
+    form.tags.choices = [(tag.id, tag.name) for tag in all_tags]
+    
     if form.validate_on_submit():
         # 验证权限相关字段
         if form.permission.data == 'verify':
@@ -215,6 +231,7 @@ def edit_article(article_id):
                                      form=form,
                                      article=article,
                                      is_new=False,
+                                     all_tags=all_tags,
                                      current_admin=get_current_admin(),
                                      session_info=get_session_info())
         
@@ -229,6 +246,15 @@ def edit_article(article_id):
             article.is_top = form.is_top.data
             article.view_count = form.view_count.data or 0
             article.updated_at = datetime.utcnow()
+            
+            # 处理标签关联
+            selected_tag_ids = form.tags.data
+            if selected_tag_ids:
+                selected_tags = Tag.query.filter(Tag.id.in_(selected_tag_ids)).all()
+                article.tags = selected_tags
+            else:
+                # 如果没有选择标签，清除所有标签关联
+                article.tags = []
             
             db.session.commit()
             
@@ -252,6 +278,8 @@ def edit_article(article_id):
         form.status.data = article.status
         form.is_top.data = article.is_top
         form.view_count.data = article.view_count
+        # 设置已选择的标签
+        form.tags.data = [tag.id for tag in article.tags]
     
     current_admin = get_current_admin()
     session_info = get_session_info()
@@ -260,6 +288,7 @@ def edit_article(article_id):
                          form=form,
                          article=article,
                          is_new=False,
+                         all_tags=all_tags,
                          current_admin=current_admin,
                          session_info=session_info)
 
@@ -432,8 +461,8 @@ def batch_change_status():
 @admin.route('/logout')
 def logout():
     """管理员登出"""
-    username = admin_logout()
-    flash(f'再见，{username}！已安全登出', 'info')
+    admin_logout()
+    flash('您已成功登出，感谢使用！', 'success')
     return redirect(url_for('admin.login'))
 
 
@@ -461,4 +490,121 @@ def profile():
 def settings():
     """管理员系统设置页面"""
     current_admin = get_current_admin()
-    return render_template('admin/settings.html', current_admin=current_admin) 
+    return render_template('admin/settings.html', current_admin=current_admin)
+
+
+@admin.route('/tags')
+@login_required
+def tags():
+    """标签管理页面"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 15  # 每页显示15个标签
+    
+    # 获取所有标签，按创建时间降序
+    tags = Tag.query.order_by(Tag.created_at.desc()).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+    
+    current_admin = get_current_admin()
+    session_info = get_session_info()
+    
+    return render_template('admin/tags.html',
+                         tags=tags,
+                         current_admin=current_admin,
+                         session_info=session_info)
+
+
+@admin.route('/tag/create', methods=['POST'])
+@login_required
+def create_tag():
+    """创建新标签"""
+    try:
+        name = request.form.get('name', '').strip()
+        color = request.form.get('color', '#007bff').strip()
+        
+        if not name:
+            return jsonify({'success': False, 'message': '标签名称不能为空'})
+        
+        # 检查标签是否已存在
+        existing_tag = Tag.query.filter_by(name=name).first()
+        if existing_tag:
+            return jsonify({'success': False, 'message': '标签已存在'})
+        
+        # 创建新标签
+        tag = Tag(name=name, color=color)
+        db.session.add(tag)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'标签《{name}》创建成功',
+            'tag': tag.to_dict()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'创建标签失败: {str(e)}'})
+
+
+@admin.route('/tag/edit/<int:tag_id>', methods=['POST'])
+@login_required
+def edit_tag(tag_id):
+    """编辑标签"""
+    try:
+        tag = Tag.query.get_or_404(tag_id)
+        
+        name = request.form.get('name', '').strip()
+        color = request.form.get('color', '#007bff').strip()
+        
+        if not name:
+            return jsonify({'success': False, 'message': '标签名称不能为空'})
+        
+        # 检查标签名是否与其他标签冲突
+        existing_tag = Tag.query.filter(Tag.name == name, Tag.id != tag_id).first()
+        if existing_tag:
+            return jsonify({'success': False, 'message': '标签名称已存在'})
+        
+        # 更新标签
+        tag.name = name
+        tag.color = color
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'标签《{name}》更新成功',
+            'tag': tag.to_dict()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'更新标签失败: {str(e)}'})
+
+
+@admin.route('/tag/delete/<int:tag_id>', methods=['POST'])
+@login_required
+def delete_tag(tag_id):
+    """删除标签"""
+    try:
+        tag = Tag.query.get_or_404(tag_id)
+        
+        # 检查标签是否被文章使用
+        if tag.articles.count() > 0:
+            return jsonify({
+                'success': False, 
+                'message': f'标签《{tag.name}》正在被 {tag.articles.count()} 篇文章使用，无法删除'
+            })
+        
+        tag_name = tag.name
+        db.session.delete(tag)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'标签《{tag_name}》已删除'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'删除标签失败: {str(e)}'}) 
