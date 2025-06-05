@@ -39,7 +39,11 @@ def update_database():
 
 def main():
     """主函数"""
-    app = create_app('development')
+    # 从环境变量获取配置，默认为development
+    config_name = os.getenv('FLASK_CONFIG', 'development')
+    print(f"使用配置环境: {config_name}")
+    
+    app = create_app(config_name)
     with app.app_context():
         update_database()
 

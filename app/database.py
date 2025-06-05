@@ -9,6 +9,7 @@
 from flask import Flask
 from . import create_app, db
 from .models import Admin, Config
+import os
 
 
 def init_database():
@@ -74,6 +75,8 @@ def reset_database():
 
 if __name__ == '__main__':
     # 创建应用上下文
-    app = create_app('development')
+    config_name = os.getenv('FLASK_CONFIG', 'development')
+    print(f"使用配置环境: {config_name}")
+    app = create_app(config_name)
     with app.app_context():
         init_database() 

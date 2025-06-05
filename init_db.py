@@ -18,14 +18,18 @@ from app.database import init_database, reset_database
 
 def main():
     """主函数"""
+    # 从环境变量获取配置，默认为development
+    config_name = os.getenv('FLASK_CONFIG', 'development')
+    print(f"使用配置环境: {config_name}")
+    
     if len(sys.argv) > 1 and sys.argv[1] == '--reset':
         # 重置数据库
-        app = create_app('development')
+        app = create_app(config_name)
         with app.app_context():
             reset_database()
     else:
         # 正常初始化
-        app = create_app('development')
+        app = create_app(config_name)
         with app.app_context():
             init_database()
 

@@ -96,8 +96,7 @@ pip install --upgrade pip
 ### 3. 数据库初始化
 
 ```bash
-# 全新部署：初始化数据库（仅首次部署）
-python init_db.py
+
 
 # 如果是现有数据库需要添加访问统计功能：
 # python update_db.py
