@@ -2,9 +2,9 @@
 
 ## 服务器信息
 
-- **IP地址**: 43.142.171.111
-- **域名**: www.rlj.net.cn
-- **配置**: 2C2G50GB SSD
+- **IP地址**: 
+- **域名**: 
+- **配置**: 
 - **部署用户**: myblog
 - **部署目录**: /home/myblog/record_log
 - **MySQL用户**: blog_user
@@ -12,8 +12,8 @@
 
 ## SSL证书配置
 
-- **证书文件**: /etc/nginx/rlj.net.cn_bundle.crt
-- **私钥文件**: /etc/nginx/rlj.net.cn.key
+- **证书文件**: /etc/nginx/xxx.crt
+- **私钥文件**: /etc/nginx/xxx.key
 
 ## 部署前准备
 
@@ -28,7 +28,7 @@ sudo nano /etc/environment
 # 添加以下内容
 SECRET_KEY="your-production-secret-key-here"
 FLASK_CONFIG="production"
-DATABASE_URL="mysql+pymysql://blog_user:%5E%28withrlj%40%40%23blog35%24%25RLJTTES1%21s@localhost:3306/record_log?charset=utf8mb4"
+DATABASE_URL="mysql+pymysql://blog_user:your_password@localhost:3306/record_log?charset=utf8mb4"
 ```
 
 ### 2. 数据库准备
@@ -77,7 +77,7 @@ cd /home/myblog/record_log
 git pull origin main
 
 # 或者使用scp上传代码
-# scp -r ./record_log myblog@43.142.171.111:/home/myblog/
+# scp -r 
 ```
 
 ### 2. Python环境配置
@@ -179,14 +179,14 @@ netstat -tlnp | grep :5000
 sudo systemctl status nginx
 
 # 检查SSL证书
-curl -I https://www.rlj.net.cn
+curl -I https://
 ```
 
 ### 2. 功能测试
 
-1. **访问网站**: https://www.rlj.net.cn
-2. **HTTP重定向**: http://www.rlj.net.cn 应自动重定向到HTTPS
-3. **管理后台**: https://www.rlj.net.cn/admin/login
+1. **访问网站**: https:
+2. **HTTP重定向**: http: 应自动重定向到HTTPS
+3. **管理后台**: https:/
 4. **静态文件**: 检查CSS、JS、图片加载
 5. **数据库连接**: 测试文章创建和读取
 
@@ -538,10 +538,10 @@ log "部署完成"
 4. **SSL证书问题**
    ```bash
    # 检查证书文件
-   sudo ls -la /etc/nginx/rlj.net.cn*
+   sudo ls -la /etc/nginx/*
    
    # 测试SSL
-   openssl s_client -connect www.rlj.net.cn:443
+   openssl s_client -connect www.xxxx:443
    ```
 
 ## 性能优化建议
