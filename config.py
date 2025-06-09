@@ -36,7 +36,7 @@ class DevelopmentConfig(Config):
     """开发环境配置"""
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
-        'mysql+pymysql://root:200035@localhost/myblog_dev'
+        'mysql+pymysql://root:root_password@localhost/myblog_dev'
     
     # 开发环境session配置
     SESSION_COOKIE_SECURE = False  # 开发环境允许HTTP
