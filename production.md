@@ -19,17 +19,7 @@
 
 ### 1. 环境变量设置
 
-在服务器上设置以下环境变量：
-
-```bash
-# 创建环境变量文件
-sudo nano /etc/environment
-
-# 添加以下内容
-SECRET_KEY="your-production-secret-key-here"
-FLASK_CONFIG="production"
-DATABASE_URL="mysql+pymysql://blog_user:%5E%28withrlj%40%40%23blog35%24%25RLJTTES1%21s@localhost:3306/record_log?charset=utf8mb4"
-```
+环境变量将在Supervisor配置中直接设置，无需手动配置系统环境变量。
 
 ### 2. 数据库准备
 
@@ -76,13 +66,16 @@ cd /home/myblog/record_log
 # 从git仓库拉取最新代码
 git pull origin main
 
-# 或者使用scp上传代码
+# 或者使用scp上传代码，文件上传
 # scp -r ./record_log myblog@43.142.171.111:/home/myblog/
 ```
 
 ### 2. Python环境配置
 
 ```bash
+#创建
+python3 -m venv venv
+
 # 激活虚拟环境
 source venv/bin/activate
 
@@ -96,7 +89,8 @@ pip install --upgrade pip
 ### 3. 数据库初始化
 
 ```bash
-
+# 全新部署：初始化数据库（仅首次部署）
+python init_db.py
 
 # 如果是现有数据库需要添加访问统计功能：
 # python update_db.py
@@ -107,15 +101,14 @@ pip install --upgrade pip
 ### 4. 静态文件权限设置
 
 ```bash
-# 设置静态文件目录权限
+# Git已包含所需的文件夹结构，只需设置权限
 chmod -R 755 static/
 chown -R myblog:myblog static/
 
-# 创建上传目录
-mkdir -p static/images/uploads
-mkdir -p static/uploads
-chmod 755 static/images/uploads
-chmod 755 static/uploads
+# 验证目录结构（应该已存在,不存在就创建）
+ls -la static/
+ls -la static/images/
+ls -la static/uploads/
 ```
 
 ### 5. 配置Nginx
@@ -130,6 +123,21 @@ sudo ln -sf /etc/nginx/sites-available/record_log /etc/nginx/sites-enabled/
 # 删除默认站点（如果存在）
 sudo rm -f /etc/nginx/sites-enabled/default
 
+# 编辑/etc/nginx/nginx.conf ,在http处添加：
+http {
+    include /etc/nginx/sites-enabled/*;
+    include       mime.types;
+    default_type  application/octet-stream;
+    ...}
+
+
+# 测试Nginx配置
+sudo nginx -t
+
+# 启动Nginx服务（如果未启动）
+sudo systemctl start nginx
+sudo systemctl enable nginx
+
 # 测试Nginx配置
 sudo nginx -t
 
@@ -142,6 +150,17 @@ sudo systemctl reload nginx
 ```bash
 # 复制Supervisor配置
 sudo cp deploy/supervisor.conf /etc/supervisor/conf.d/record_log.conf
+
+# 复制gunicorn.conf.py ,作为引用
+sudo cp deploy/gunicorn.conf.py /home/myblog/record_log
+# ⚠️ 重要：编辑配置文件，可以更新密码和密钥
+sudo nano /etc/supervisor/conf.d/record_log.conf
+
+# 在environment行中修改以下内容（注意：不要有引号，用逗号分隔）：
+# environment=FLASK_CONFIG=production,SECRET_KEY=你的实际密钥,DATABASE_URL=mysql+pymysql://blog_user:你的实际密码@localhost/record_log,PYTHONPATH=/home/myblog/record_log,PATH=/home/myblog/record_log/venv/bin
+
+# 示例：
+# environment=FLASK_CONFIG=production,SECRET_KEY=9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c,DATABASE_URL=mysql+pymysql://blog_user:StrongPass123@localhost/record_log,PYTHONPATH=/home/myblog/record_log,PATH=/home/myblog/record_log/venv/bin
 
 # 重新读取配置
 sudo supervisorctl reread
@@ -177,6 +196,7 @@ netstat -tlnp | grep :5000
 
 # 检查Nginx状态
 sudo systemctl status nginx
+
 
 # 检查SSL证书
 curl -I https://www.rlj.net.cn
@@ -222,8 +242,52 @@ sudo systemctl reload nginx
 # 更新代码
 cd /home/myblog/record_log
 git pull origin main
+## 强烈建议先备份代码
+sudo cp /home/myblog/record_log/* /home/myblog/bakxxxx/
 sudo supervisorctl restart record_log
+
+# 修改supervisor配置文件
+# 先备份
+sudo cp xxx xxx.conf.bakxxx
+sudo vim /etc/supervisor/conf.d/record_log.conf
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start record_log
+sudo supervisorctl restart record_log
+sudo supervisorctl status record_log
+
+# 修改gunicorn配置文件
+## 先备份
+sudo cp xxx xxxx.py.bak
+sudo vim /home/myblog/record_log/gunicorn.conf.py
+sudo supervisorctl restart record_log #由于supervisor管理gunicorn
+
+# 修改nginx
+#先备份
+sudo cp /etc/nginx/sites-available/record_log /etc/nginx/sites-available/record_log.bak
+sudo vim /etc/nginx/sites-available/record_log
+# 检查结果
+sudo nginx -t
+
+# 修改服务配置重启：
+sudo systemctl reload nginx
+
+# 中断服务重启
+sudo systemctl restart nginx
+
+#验证结果
+sudo systemctl status nginx
+
+# 测试访问
+curl -I http://your_domain.com
+
+# 回滚
+# 恢复备份配置
+sudo cp /etc/nginx/nginx.conf.bak /etc/nginx/nginx.conf
+# 重新加载
+sudo nginx -t && sudo systemctl reload nginx
 ```
+
 
 ### 3. 备份策略
 
@@ -234,6 +298,12 @@ mysqldump -u blog_user -p record_log > backup_$(date +%Y%m%d_%H%M%S).sql
 # 文件备份
 tar -czf backup_files_$(date +%Y%m%d_%H%M%S).tar.gz static/images/uploads/
 ```
+
+### 4.日志轮转
+
+
+### 5.git提交
+
 
 ## 安全注意事项
 

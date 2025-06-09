@@ -3,7 +3,7 @@
 
 """
 数据库更新脚本
-用于在现有数据库中添加新的SiteVisit表
+案例：用于在现有数据库中添加新的SiteVisit表
 """
 
 import sys

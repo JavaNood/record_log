@@ -41,6 +41,8 @@ db.sqlite3-journal
 config_secret.py
 config_dev.py
 secrets.py
+deploy/gunicorn.conf.py 
+deploy/nginx.conf
 
 # SSL certificates and keys
 *.crt
@@ -50,7 +52,7 @@ secrets.py
 *.p12
 
 # Upload directories with sensitive content
-static/images/uploads/*
+static/images/*
 static/uploads/*
 uploads/*
 !static/images/uploads/.gitkeep
@@ -95,3 +97,11 @@ check_db.py
 # Background images (may contain personal content)
 static/images/backgrounds/*
 !static/images/backgrounds/.gitkeep 
+
+##create devolopment files 
+architecture.md
+task.md
+production.md
+
+## deploy files
+/deploy/*

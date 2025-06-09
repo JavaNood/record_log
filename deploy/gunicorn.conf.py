@@ -46,5 +46,4 @@ worker_tmp_dir = "/dev/shm"
 
 # 环境变量
 raw_env = [
-    'FLASK_CONFIG=production',
-] 
+        'FLASK_CONFIG=production'] 
