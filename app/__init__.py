@@ -42,6 +42,17 @@ def create_app(config_name='default'):
     if compress:
         compress.init_app(app)
     
+    # 添加时间格式化过滤器
+    from .utils import format_datetime, format_relative_time
+    
+    @app.template_filter('datetime')
+    def datetime_filter(dt, format_str='%Y-%m-%d %H:%M:%S'):
+        return format_datetime(dt, format_str)
+    
+    @app.template_filter('relative_time')
+    def relative_time_filter(dt):
+        return format_relative_time(dt)
+    
     # 添加安全头中间件
     @app.after_request
     def add_security_headers(response):
@@ -105,10 +116,11 @@ def create_app(config_name='default'):
                 
                 # 检查是否是重复访问（同一session在5分钟内访问同一页面不重复记录）
                 from datetime import datetime, timedelta
+                from .utils import get_local_now
                 recent_visit = SiteVisit.query.filter(
                     SiteVisit.session_id == session_id,
                     SiteVisit.page_url == page_url,
-                    SiteVisit.visit_time >= datetime.utcnow() - timedelta(minutes=5)
+                    SiteVisit.visit_time >= get_local_now() - timedelta(minutes=5)
                 ).first()
                 
                 if not recent_visit:

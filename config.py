@@ -8,6 +8,8 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # 时区配置
+    TIMEZONE = 'Asia/Shanghai'
     
     # Session配置
     PERMANENT_SESSION_LIFETIME = timedelta(hours=1)  # session有效期1小时

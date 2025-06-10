@@ -156,8 +156,21 @@
     font-size: 0.875rem;
 }
 
+.hot-article-item {
+    cursor: pointer !important;
+    border-radius: 8px !important;
+    padding: 8px !important;
+    transition: all 0.3s ease !important;
+}
+
 .hot-article-item:hover {
     background-color: rgba(0,123,255,0.1) !important;
+    transform: translateX(2px);
+}
+
+.hot-article-item:active {
+    transform: translateX(1px);
+    background-color: rgba(0,123,255,0.2) !important;
 }
 
 /* 文章标题链接样式 */
@@ -223,6 +236,15 @@ mark.search-highlight {
                 <small class="text-muted">({{ timeline_articles|length }}篇)</small>
             </h6>
             
+            <!-- 时间线排序选择器 -->
+            <div class="mb-3">
+                <label class="form-label small text-muted">时间线排序方式</label>
+                <select class="form-select form-select-sm" id="timelineOrderFilter">
+                    <option value="created" {{ 'selected' if timeline_order == 'created' or not timeline_order else '' }}>按创建时间</option>
+                    <option value="updated" {{ 'selected' if timeline_order == 'updated' else '' }}>按更新时间</option>
+                </select>
+            </div>
+            
             <!-- 时间范围筛选器 -->
             <div class="mb-3">
                 <select class="form-select form-select-sm" id="timeRangeFilter">
@@ -250,7 +272,11 @@ mark.search-highlight {
                 {% for article in timeline_articles %}
                 <div class="timeline-item" data-article-id="article-{{ article.id }}">
                     <div class="timeline-date">
-                        {{ article.created_at.strftime('%m月%d日') }}
+                        {% if timeline_order == 'updated' %}
+                            {{ article.updated_at.strftime('%m月%d日') }}
+                        {% else %}
+                            {{ article.created_at.strftime('%m月%d日') }}
+                        {% endif %}
                     </div>
                     <div class="timeline-title">
                         {% if article.is_top %}
@@ -314,6 +340,10 @@ mark.search-highlight {
                     <!-- 文章信息 -->
                     <div class="text-muted small mb-3">
                         <i class="fas fa-calendar-alt"></i> 发布于 {{ article.created_at.strftime('%Y年%m月%d日') }}
+                        {% if article.updated_at and article.updated_at != article.created_at %}
+                            <span class="mx-2">|</span>
+                            <i class="fas fa-edit"></i> 更新于 {{ article.updated_at.strftime('%Y年%m月%d日') }}
+                        {% endif %}
                         <span class="mx-2">|</span>
                         <i class="fas fa-eye"></i> 浏览 {{ article.view_count }} 次
                         {% if article.tags %}
@@ -348,9 +378,9 @@ mark.search-highlight {
                     {% if articles.has_prev %}
                         <li class="page-item">
                             {% if search_query %}
-                                <a class="page-link" href="{{ url_for('frontend.search', page=articles.prev_num, q=search_query, range=time_range, date=custom_date, tag=tag_filter, permission=permission_filter) }}" aria-label="上一页">
+                                <a class="page-link" href="{{ url_for('frontend.search', page=articles.prev_num, q=search_query, range=time_range, date=custom_date, tag=tag_filter, permission=permission_filter, timeline_order=timeline_order) }}" aria-label="上一页">
                             {% else %}
-                                <a class="page-link" href="{{ url_for('frontend.index', page=articles.prev_num, range=time_range, date=custom_date, tag=tag_filter, permission=permission_filter) }}" aria-label="上一页">
+                                <a class="page-link" href="{{ url_for('frontend.index', page=articles.prev_num, range=time_range, date=custom_date, tag=tag_filter, permission=permission_filter, timeline_order=timeline_order) }}" aria-label="上一页">
                             {% endif %}
                                 <span aria-hidden="true">&laquo;</span>
                             </a>
@@ -362,9 +392,9 @@ mark.search-highlight {
                             {% if page_num != articles.page %}
                                 <li class="page-item">
                                     {% if search_query %}
-                                        <a class="page-link" href="{{ url_for('frontend.search', page=page_num, q=search_query, range=time_range, date=custom_date, tag=tag_filter, permission=permission_filter) }}">{{ page_num }}</a>
+                                        <a class="page-link" href="{{ url_for('frontend.search', page=page_num, q=search_query, range=time_range, date=custom_date, tag=tag_filter, permission=permission_filter, timeline_order=timeline_order) }}">{{ page_num }}</a>
                                     {% else %}
-                                        <a class="page-link" href="{{ url_for('frontend.index', page=page_num, range=time_range, date=custom_date, tag=tag_filter, permission=permission_filter) }}">{{ page_num }}</a>
+                                        <a class="page-link" href="{{ url_for('frontend.index', page=page_num, range=time_range, date=custom_date, tag=tag_filter, permission=permission_filter, timeline_order=timeline_order) }}">{{ page_num }}</a>
                                     {% endif %}
                                 </li>
                             {% else %}
@@ -382,9 +412,9 @@ mark.search-highlight {
                     {% if articles.has_next %}
                         <li class="page-item">
                             {% if search_query %}
-                                <a class="page-link" href="{{ url_for('frontend.search', page=articles.next_num, q=search_query, range=time_range, date=custom_date, tag=tag_filter, permission=permission_filter) }}" aria-label="下一页">
+                                <a class="page-link" href="{{ url_for('frontend.search', page=articles.next_num, q=search_query, range=time_range, date=custom_date, tag=tag_filter, permission=permission_filter, timeline_order=timeline_order) }}" aria-label="下一页">
                             {% else %}
-                                <a class="page-link" href="{{ url_for('frontend.index', page=articles.next_num, range=time_range, date=custom_date, tag=tag_filter, permission=permission_filter) }}" aria-label="下一页">
+                                <a class="page-link" href="{{ url_for('frontend.index', page=articles.next_num, range=time_range, date=custom_date, tag=tag_filter, permission=permission_filter, timeline_order=timeline_order) }}" aria-label="下一页">
                             {% endif %}
                                 <span aria-hidden="true">&raquo;</span>
                             </a>
@@ -518,7 +548,7 @@ mark.search-highlight {
             </div>
             <div class="card-body">
                 <div class="permission-filter-group">
-                    <button class="btn btn-outline-secondary btn-sm permission-filter-btn {{ 'active' if permission_filter == 'all' else '' }}" 
+                    <button class="btn btn-outline-secondary btn-sm permission-filter-btn {{ 'active' if permission_filter == 'all' or not permission_filter else '' }}" 
                             data-permission="all">
                         <i class="fas fa-globe"></i> 全部文章
                     </button>
@@ -545,10 +575,7 @@ mark.search-highlight {
                 {% if top_articles %}
                     {% for article in top_articles %}
                     <div class="d-flex align-items-start mb-3 hot-article-item" 
-                         data-article-id="article-{{ article.id }}"
-                         style="cursor: pointer; border-radius: 8px; padding: 8px; transition: all 0.3s ease;"
-                         onmouseover="this.style.backgroundColor='rgba(0,123,255,0.1)'"
-                         onmouseout="this.style.backgroundColor='transparent'">
+                         data-article-id="article-{{ article.id }}">
                         <div class="flex-shrink-0">
                             <span class="badge bg-danger">{{ loop.index }}</span>
                         </div>
@@ -595,6 +622,14 @@ mark.search-highlight {
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // 时间线排序选择器功能
+    const timelineOrderFilter = document.getElementById('timelineOrderFilter');
+    if (timelineOrderFilter) {
+        timelineOrderFilter.addEventListener('change', function() {
+            applyTimelineOrder(this.value);
+        });
+    }
+    
     // 时间范围筛选功能
     const timeRangeFilter = document.getElementById('timeRangeFilter');
     const customDateInput = document.getElementById('customDateInput');
@@ -636,6 +671,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 applyCustomDateFilter();
             }
         });
+    }
+    
+    function applyTimelineOrder(order) {
+        const currentUrl = new URL(window.location);
+        
+        if (order === 'created') {
+            currentUrl.searchParams.delete('timeline_order');
+        } else {
+            currentUrl.searchParams.set('timeline_order', order);
+        }
+        
+        // 跳转到新URL
+        window.location.href = currentUrl.toString();
     }
     
     function applyTimeFilter(range, date) {
@@ -719,13 +767,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 3000);
             } else {
                 // 文章不在当前页面，需要跨页面跳转
+                console.log(`文章 ${targetId} 不在当前页面，准备跨页面跳转`);
+                
                 // 激活点击的时间线项目
                 timelineItems.forEach(ti => ti.classList.remove('active'));
                 this.classList.add('active');
                 // 滚动时间线确保点击的项目在可视区域（强制滚动）
                 scrollTimelineToItem(this, { forceScroll: true });
                 
+                // 提取文章ID（确保正确解析）
                 const articleIdNum = parseInt(targetId.replace('article-', ''));
+                if (isNaN(articleIdNum)) {
+                    console.error('无法解析文章ID:', targetId);
+                    alert('文章ID格式错误');
+                    return;
+                }
+                
+                console.log(`解析得到文章ID: ${articleIdNum}`);
                 navigateToArticlePage(articleIdNum, targetId);
             }
         });
@@ -780,11 +838,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // 页面加载后检查锚点定位
     function checkPageAnchor() {
         const hash = window.location.hash;
+        console.log('检查页面锚点:', hash);
+        
         if (hash && hash.startsWith('#article-')) {
-            const targetElement = document.getElementById(hash.substring(1));
+            const targetElementId = hash.substring(1);
+            const targetElement = document.getElementById(targetElementId);
+            
+            console.log('目标元素:', targetElement ? '找到' : '未找到');
+            
             if (targetElement) {
+                console.log('锚点定位成功，开始滚动和高亮');
+                
                 // 延迟一点确保页面完全加载
                 setTimeout(() => {
+                    // 滚动到目标文章
                     targetElement.scrollIntoView({
                         behavior: 'smooth',
                         block: 'start'
@@ -799,13 +866,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     // 激活对应的时间线项目并滚动到位置
                     const timelineItems = document.querySelectorAll('.timeline-item');
                     timelineItems.forEach(item => {
-                        if (item.getAttribute('data-article-id') === hash.substring(1)) {
+                        item.classList.remove('active'); // 先清除所有活动状态
+                        if (item.getAttribute('data-article-id') === targetElementId) {
                             item.classList.add('active');
+                            console.log('激活时间线项目并滚动到位置');
                             // 滚动时间线到对应位置（强制滚动）
                             scrollTimelineToItem(item, { forceScroll: true });
                         }
                     });
+                    
+                    // 清除URL中的锚点，避免页面刷新时重复触发
+                    if (window.history && window.history.replaceState) {
+                        const cleanUrl = window.location.href.split('#')[0];
+                        window.history.replaceState(null, '', cleanUrl);
+                    }
                 }, 500);
+            } else {
+                console.log('目标文章不在当前页面，可能在其他页面');
+                // 目标文章不在当前页面，这种情况下URL已经是正确的页面
+                // 不需要额外处理，因为跨页面跳转已经处理了这种情况
             }
         }
     }
@@ -852,199 +931,96 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (scrollDistance > SMOOTH_SCROLL_THRESHOLD) {
             // 中等距离，使用快速滚动
             scrollBehavior = 'smooth';
-            console.log(`中等距离(${scrollDistance}px)，使用快速滚动`);
+            console.log(`中等距离(${scrollDistance}px)，使用平滑滚动`);
         } else {
-            // 短距离，使用正常平滑滚动
-            console.log(`短距离(${scrollDistance}px)，使用平滑滚动`);
+            // 距离较近，使用平滑滚动
+            console.log(`距离较近(${scrollDistance}px)，使用平滑滚动`);
         }
         
-        // 执行滚动
         timelineContainer.scrollTo({
             top: Math.max(0, targetScrollTop),
             behavior: scrollBehavior
         });
+    }
+
+    // 跨页面导航功能
+    function navigateToArticlePage(articleId, targetElementId) {
+        console.log(`开始跨页面导航到文章 ${articleId}`);
         
-        // 如果是快速滚动，添加一个临时的CSS动画来控制速度
-        if (scrollDistance > SMOOTH_SCROLL_THRESHOLD && scrollDistance <= INSTANT_SCROLL_THRESHOLD) {
-            timelineContainer.style.scrollBehavior = 'auto';
+        // 显示加载指示器
+        const timelineItem = document.querySelector(`[data-article-id="${targetElementId}"]`);
+        if (timelineItem) {
+            const originalContent = timelineItem.innerHTML;
+            timelineItem.innerHTML = `
+                <div class="timeline-date">加载中...</div>
+                <div class="timeline-title">
+                    <i class="fas fa-spinner fa-spin me-1"></i>正在跳转...
+                </div>
+            `;
             
-            // 使用自定义动画实现快速滚动
-            const startTime = performance.now();
-            const startScrollTop = currentScrollTop;
-            const targetScroll = Math.max(0, targetScrollTop);
-            const distance = targetScroll - startScrollTop;
-            const duration = Math.min(500, scrollDistance / 2); // 最多500ms，根据距离调整
+            // 恢复原始内容的函数
+            const restoreContent = () => {
+                timelineItem.innerHTML = originalContent;
+            };
             
-            function animateScroll(currentTime) {
-                const elapsed = currentTime - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                
-                // 使用缓动函数
-                const easeProgress = easeOutCubic(progress);
-                const currentPosition = startScrollTop + (distance * easeProgress);
-                
-                timelineContainer.scrollTop = currentPosition;
-                
-                if (progress < 1) {
-                    requestAnimationFrame(animateScroll);
-                } else {
-                    // 恢复正常滚动行为
-                    timelineContainer.style.scrollBehavior = '';
-                }
-            }
-            
-            requestAnimationFrame(animateScroll);
+            // 设置超时恢复
+            setTimeout(restoreContent, 5000);
         }
         
-        console.log('时间线滚动执行完成，文章:', targetItem.getAttribute('data-article-id'));
-    }
-    
-    // 缓动函数：平滑的减速效果
-    function easeOutCubic(t) {
-        return 1 - Math.pow(1 - t, 3);
-    }
-
-    // 页面加载完成后检查锚点
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', checkPageAnchor);
-    } else {
-        checkPageAnchor();
-    }
-
-    // 跨页面导航到指定文章
-    function navigateToArticlePage(articleId, targetId) {
-        // 构建URL，包含搜索和筛选参数
+        // 构建API查询URL，传递当前筛选参数
         const currentUrl = new URL(window.location);
-        const params = new URLSearchParams(currentUrl.search);
+        const apiUrl = `/api/article-page/${articleId}?` + currentUrl.searchParams.toString();
         
-        // 计算文章应该在第几页（每页10篇文章）
-        const articlesPerPage = 10;
-        
-        // 获取时间线中的文章列表来计算页数
-        const timelineItems = document.querySelectorAll('.timeline-item');
-        let articleIndex = -1;
-        
-        // 找到文章在时间线中的位置
-        timelineItems.forEach((item, index) => {
-            if (item.getAttribute('data-article-id') === targetId) {
-                articleIndex = index;
-            }
-        });
-        
-        if (articleIndex !== -1) {
-            // 计算目标页数（从1开始）
-            const targetPage = Math.floor(articleIndex / articlesPerPage) + 1;
-            
-            // 设置页码参数
-            if (targetPage > 1) {
-                params.set('page', targetPage);
-            } else {
-                params.delete('page');
-            }
-            
-            // 构建新URL
-            let newUrl = currentUrl.pathname;
-            if (params.toString()) {
-                newUrl += '?' + params.toString();
-            }
-            newUrl += '#' + targetId;
-            
-            // 跳转到目标页面
-            window.location.href = newUrl;
-        } else {
-            // 如果找不到文章位置，直接跳转到首页搜索
-            const searchUrl = new URL('{{ url_for("frontend.index") }}', window.location.origin);
-            searchUrl.hash = targetId;
-            window.location.href = searchUrl.toString();
-        }
+        // 查询文章所在页面
+        fetch(apiUrl)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log(`文章 ${articleId} 在第 ${data.page} 页`);
+                    
+                    // 构建目标URL
+                    const targetUrl = new URL(window.location);
+                    
+                    // 设置页码
+                    if (data.page > 1) {
+                        targetUrl.searchParams.set('page', data.page);
+                    } else {
+                        targetUrl.searchParams.delete('page');
+                    }
+                    
+                    // 添加锚点
+                    targetUrl.hash = targetElementId;
+                    
+                    console.log(`跳转到: ${targetUrl.toString()}`);
+                    
+                    // 跳转到目标页面
+                    window.location.href = targetUrl.toString();
+                } else {
+                    console.error('查询文章页面失败:', data.message);
+                    
+                    // 恢复时间线项目内容
+                    if (timelineItem) {
+                        timelineItem.innerHTML = originalContent;
+                    }
+                    
+                    // 显示错误提示
+                    alert(`无法跳转到文章: ${data.message}`);
+                }
+            })
+            .catch(error => {
+                console.error('API请求失败:', error);
+                
+                // 恢复时间线项目内容
+                if (timelineItem) {
+                    timelineItem.innerHTML = originalContent;
+                }
+                
+                // 显示错误提示
+                alert('跳转失败，请稍后重试');
+            });
     }
 
-    // 搜索框快捷键支持
-    document.addEventListener('keydown', function(e) {
-        // Ctrl+K 或 Cmd+K 聚焦搜索框
-        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-            e.preventDefault();
-            const searchInput = document.querySelector('input[name="q"]');
-            if (searchInput) {
-                searchInput.focus();
-                searchInput.select();
-            }
-        }
-        
-        // ESC 清空搜索框
-        if (e.key === 'Escape') {
-            const searchInput = document.querySelector('input[name="q"]');
-            if (searchInput && document.activeElement === searchInput) {
-                searchInput.value = '';
-            }
-        }
-    });
-
-    // 搜索框增强功能
-    const searchInput = document.querySelector('input[name="q"]');
-    if (searchInput) {
-        // 添加快捷键提示
-        searchInput.setAttribute('title', '快捷键：Ctrl+K 聚焦，ESC 清空');
-        
-        // Enter 键提交搜索
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                this.closest('form').submit();
-            }
-        });
-    }
-    
-    // 标签筛选功能
-    const tagFilterBtns = document.querySelectorAll('.tag-filter-btn');
-    tagFilterBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const tagValue = this.getAttribute('data-tag');
-            applyFilter('tag', tagValue);
-        });
-    });
-    
-    // 权限筛选功能
-    const permissionFilterBtns = document.querySelectorAll('.permission-filter-btn');
-    permissionFilterBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const permissionValue = this.getAttribute('data-permission');
-            applyFilter('permission', permissionValue);
-        });
-    });
-    
-    // 时间筛选功能
-    const timeFilterBtns = document.querySelectorAll('.time-filter-btn');
-    timeFilterBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const timeValue = this.getAttribute('data-time');
-            applyFilter('time', timeValue);
-        });
-    });
-    
-    // 键盘快捷键支持筛选
-    document.addEventListener('keydown', function(e) {
-        // Alt + 数字键快速筛选
-        if (e.altKey && !e.ctrlKey && !e.metaKey) {
-            switch(e.key) {
-                case '1':
-                    e.preventDefault();
-                    applyFilter('permission', 'all');
-                    break;
-                case '2':
-                    e.preventDefault();
-                    applyFilter('permission', 'public');
-                    break;
-                case '3':
-                    e.preventDefault();
-                    applyFilter('permission', 'verify');
-                    break;
-
-            }
-        }
-    });
-    
-    // 热门文章点击跳转功能
+    // 热门文章点击处理
     const hotArticleItems = document.querySelectorAll('.hot-article-item');
     hotArticleItems.forEach(item => {
         item.addEventListener('click', function() {
@@ -1052,96 +1028,95 @@ document.addEventListener('DOMContentLoaded', function() {
             const targetElement = document.getElementById(targetId);
             
             if (targetElement) {
-                // 移除所有活动状态
+                // 文章在当前页面，直接滚动定位
                 timelineItems.forEach(ti => ti.classList.remove('active'));
                 articleCards.forEach(ac => ac.classList.remove('highlighted'));
                 
-                // 添加活动状态
+                // 找到对应的时间线项目并激活
+                const correspondingTimelineItem = document.querySelector(`[data-article-id="${targetId}"]`);
+                if (correspondingTimelineItem) {
+                    correspondingTimelineItem.classList.add('active');
+                    scrollTimelineToItem(correspondingTimelineItem, { forceScroll: true });
+                }
+                
                 targetElement.classList.add('highlighted');
-                
-                // 找到对应的时间线项目并激活，并滚动时间线
-                timelineItems.forEach(timelineItem => {
-                    if (timelineItem.getAttribute('data-article-id') === targetId) {
-                        timelineItem.classList.add('active');
-                        // 滚动时间线到对应位置（强制滚动）
-                        scrollTimelineToItem(timelineItem, { forceScroll: true });
-                    }
-                });
-                
-                // 平滑滚动到目标文章
                 targetElement.scrollIntoView({
                     behavior: 'smooth',
                     block: 'start'
                 });
                 
-                // 3秒后移除高亮
                 setTimeout(() => {
                     targetElement.classList.remove('highlighted');
                 }, 3000);
             } else {
-                // 如果当前页面没有这篇文章，使用跨页面跳转
+                // 文章不在当前页面，需要跨页面跳转
+                console.log(`热门文章 ${targetId} 不在当前页面，准备跨页面跳转`);
+                
                 const articleIdNum = parseInt(targetId.replace('article-', ''));
+                if (isNaN(articleIdNum)) {
+                    console.error('无法解析文章ID:', targetId);
+                    alert('文章ID格式错误');
+                    return;
+                }
+                
+                console.log(`解析得到文章ID: ${articleIdNum}`);
                 navigateToArticlePage(articleIdNum, targetId);
             }
         });
     });
+
+    // 标签筛选功能
+    const tagFilterBtns = document.querySelectorAll('.tag-filter-btn');
+    tagFilterBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const selectedTag = this.getAttribute('data-tag');
+            applyTagFilter(selectedTag);
+        });
+    });
     
-    // 增强的筛选功能 - 支持组合筛选和优化体验
-    function applyFilter(filterType, filterValue) {
-        // 显示加载状态
-        showFilterLoading(filterType, filterValue);
-        
+    // 权限筛选功能
+    const permissionFilterBtns = document.querySelectorAll('.permission-filter-btn');
+    permissionFilterBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const selectedPermission = this.getAttribute('data-permission');
+            applyPermissionFilter(selectedPermission);
+        });
+    });
+    
+    function applyTagFilter(tag) {
         const currentUrl = new URL(window.location);
         
-        if (filterType === 'tag') {
-            if (filterValue === '' || filterValue === null) {
-                currentUrl.searchParams.delete('tag');
-            } else {
-                currentUrl.searchParams.set('tag', filterValue);
-            }
-        } else if (filterType === 'permission') {
-            if (filterValue === 'all') {
-                currentUrl.searchParams.delete('permission');
-            } else {
-                currentUrl.searchParams.set('permission', filterValue);
-            }
-        } else if (filterType === 'time') {
-            if (filterValue === 'all') {
-                currentUrl.searchParams.delete('range');
-                currentUrl.searchParams.delete('date');
-            } else {
-                currentUrl.searchParams.set('range', filterValue);
-            }
+        if (!tag || tag === '') {
+            currentUrl.searchParams.delete('tag');
+        } else {
+            currentUrl.searchParams.set('tag', tag);
         }
         
-        // 重置页码（筛选时回到第一页）
+        // 重置页码
         currentUrl.searchParams.delete('page');
         
-        // 平滑跳转
+        // 跳转到新URL
         window.location.href = currentUrl.toString();
     }
     
-    // 显示筛选加载状态
-    function showFilterLoading(filterType, filterValue) {
-        const buttons = document.querySelectorAll(`.${filterType}-filter-btn`);
-        buttons.forEach(btn => {
-            if (btn.getAttribute(`data-${filterType}`) === filterValue) {
-                const originalContent = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 筛选中...';
-                btn.disabled = true;
-                
-                // 防止用户快速点击
-                setTimeout(() => {
-                    if (btn.innerHTML.includes('spinner')) {
-                        btn.innerHTML = originalContent;
-                        btn.disabled = false;
-                    }
-                }, 3000);
-            }
-        });
+    function applyPermissionFilter(permission) {
+        const currentUrl = new URL(window.location);
+        
+        if (permission === 'all') {
+            currentUrl.searchParams.delete('permission');
+        } else {
+            currentUrl.searchParams.set('permission', permission);
+        }
+        
+        // 重置页码
+        currentUrl.searchParams.delete('page');
+        
+        // 跳转到新URL
+        window.location.href = currentUrl.toString();
     }
-    
 
+    // 页面加载后初始化
+    checkPageAnchor();
 });
 </script>
-{% endblock %} 
+{% endblock %}

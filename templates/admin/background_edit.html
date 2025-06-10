@@ -160,12 +160,135 @@
     border-color: #007bff;
 }
 
+.preset-bg-option {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 100px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 3px solid transparent;
+}
+
+.preset-bg-option:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+    border-color: #007bff;
+}
+
+.preset-bg-option.active {
+    border-color: #28a745;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+}
+
+.preset-preview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.preset-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    transition: background 0.3s ease;
+}
+
+.preset-bg-option:hover .preset-overlay {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.preset-active-indicator {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    background: #28a745;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.75rem;
+}
 
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="row">
+    <!-- 预设背景选择区域 -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-palette me-2"></i>预设背景主题
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="presetBackgroundForm">
+                    <div class="row">
+                        {% for key, bg in preset_backgrounds.items() %}
+                        <div class="col-md-4 mb-3">
+                            <div class="preset-bg-option" data-preset="{{ key }}">
+                                <div class="preset-preview" style="background: {{ bg.gradient }};">
+                                    <div class="preset-overlay">
+                                        <h6 class="text-white">{{ bg.name }}</h6>
+                                        <small class="text-white-50">{{ bg.description }}</small>
+                                    </div>
+                                    {% if current_preset == key and background_type == 'preset' %}
+                                    <div class="preset-active-indicator">
+                                        <i class="fas fa-check-circle"></i>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- 时间变化开关 -->
+                    <div class="mt-4 p-3 border rounded">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" 
+                                   id="time_based_background" 
+                                   name="time_based_background" 
+                                   {{ 'checked' if time_based else '' }}>
+                            <label class="form-check-label fw-bold" for="time_based_background">
+                                <i class="fas fa-clock me-2"></i>启用时间变化背景
+                            </label>
+                        </div>
+                        <small class="text-muted mt-2 d-block">
+                            开启后背景将根据时间自动变化：
+                            上午(6-11点)春日暖阳，中午(11-15点)蓝天白云，下午(15-18点)深海蓝调，
+                            傍晚(18-22点)黄昏夕阳，夜晚(22-6点)星空夜色
+                        </small>
+                        <div class="mt-2">
+                            <button type="submit" name="update_time_setting" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-save me-1"></i>更新时间设置
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="preset_background" id="selectedPreset" value="">
+                </form>
+            </div>
+        </div>
+    </div>
+    
     <!-- 背景预览和设置 -->
     <div class="col-lg-8">
         <div class="card upload-card">
@@ -344,7 +467,38 @@ document.addEventListener('DOMContentLoaded', function() {
     const bgFitOptions = document.querySelectorAll('.bg-fit-option');
     const bgFitModeInput = document.getElementById('bg_fit_mode');
     
-
+    // 预设背景选择
+    const presetOptions = document.querySelectorAll('.preset-bg-option');
+    const selectedPresetInput = document.getElementById('selectedPreset');
+    
+    // 初始化预设背景选择状态
+    const currentBackgroundType = '{{ background_type }}';
+    const currentPreset = '{{ current_preset }}';
+    
+    if (currentBackgroundType === 'preset') {
+        presetOptions.forEach(option => {
+            if (option.dataset.preset === currentPreset) {
+                option.classList.add('active');
+            }
+        });
+    }
+    
+    // 预设背景点击事件
+    presetOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            const preset = this.dataset.preset;
+            
+            // 清除其他选中状态
+            presetOptions.forEach(opt => opt.classList.remove('active'));
+            
+            // 设置当前选中
+            this.classList.add('active');
+            selectedPresetInput.value = preset;
+            
+            // 提交表单
+            document.getElementById('presetBackgroundForm').submit();
+        });
+    });
     
     // 初始化背景适配选项
     const currentFitMode = '{{ fit_mode }}'; // 从后端获取当前模式
@@ -395,19 +549,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-                                        fileLabel.innerHTML = `
+            fileLabel.innerHTML = `
                 <i class="fas fa-check fa-2x mb-3 text-success" aria-hidden="true"></i>
                 <h6>已选择：${fileName}</h6>
                 <p class="text-muted mb-0">点击"应用设置"上传图片</p>
             `;
             
-
         } else {
             console.log('没有选择文件');
         }
     });
-    
-
     
     // 更新预览（不改变图片，只改变效果）
     function updatePreview() {
@@ -431,10 +582,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('预览效果更新:', {fitMode, blur: currentBlur});
         }
     }
-    
-
-    
-
     
     // 拖拽上传
     fileLabel.addEventListener('dragover', function(e) {
@@ -507,8 +654,6 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('请选择图片或调整设置');
         }
     });
-    
-
 });
 </script>
 {% endblock %} 

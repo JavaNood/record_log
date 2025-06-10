@@ -20,103 +20,132 @@
     {% block extra_css %}{% endblock %}
     
     <!-- 动态背景样式 -->
-    {% if background_image %}
-    <style>
-        body {
-            /* 设置背景图片和适配方式 */
-            background: url('{{ background_image }}') center center / {{ background_fit_mode or 'cover' }} no-repeat fixed, 
-                        linear-gradient(135deg, #e3f2fd 0%, #bbdefb 25%, #90caf9 50%, #e1f5fe 75%, #f0f8ff 100%);
-            background-blend-mode: normal;
-        }
-        
-        /* 为不同适配方式优化显示效果 */
-        {% if background_fit_mode == 'contain' %}
-        /* 完整显示模式：确保完全可见，背景色填充空白 */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 25%, #90caf9 50%, #e1f5fe 75%, #f0f8ff 100%);
-            z-index: -3;
-        }
-        
-        body::after {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: url('{{ background_image }}') center center / contain no-repeat;
-            z-index: -2;
-        }
-        {% elif background_fit_mode == '100% 100%' %}
-        /* 拉伸填满模式：强制填满整个视窗 */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: url('{{ background_image }}') center center / 100% 100% no-repeat;
-            z-index: -2;
-        }
-        {% else %}
-        /* 覆盖填满模式（默认）：完全覆盖，可能裁剪 */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: url('{{ background_image }}') center center / cover no-repeat;
-            z-index: -2;
-        }
+    {% if background_config %}
+        {% if background_config.type == 'preset' %}
+        <!-- 预设背景（渐变） -->
+        <style>
+            body {
+                /* 预设背景渐变 */
+                background: {{ background_config.gradient }};
+                animation: gradientShift 15s ease infinite;
+            }
+            
+            @keyframes gradientShift {
+                0%, 100% { background-size: 100% 100%; }
+                50% { background-size: 120% 120%; }
+            }
+            
+            /* 调整导航栏透明度以配合预设背景 */
+            .navbar {
+                background: rgba(255, 255, 255, 0.9) !important;
+                backdrop-filter: blur(10px);
+            }
+            
+            /* 调整卡片透明度 */
+            .card {
+                background-color: rgba(255, 255, 255, 0.92);
+                backdrop-filter: blur(10px);
+            }
+        </style>
+        {% elif background_config.type == 'custom' and background_config.image %}
+        <!-- 自定义背景图片 -->
+        <style>
+            body {
+                /* 设置背景图片和适配方式 */
+                background: url('{{ background_config.image }}') center center / {{ background_config.fit_mode or 'cover' }} no-repeat fixed, 
+                            linear-gradient(135deg, #e3f2fd 0%, #bbdefb 25%, #90caf9 50%, #e1f5fe 75%, #f0f8ff 100%);
+                background-blend-mode: normal;
+            }
+            
+            /* 为不同适配方式优化显示效果 */
+            {% if background_config.fit_mode == 'contain' %}
+            /* 完整显示模式：确保完全可见，背景色填充空白 */
+            body::before {
+                content: '';
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 25%, #90caf9 50%, #e1f5fe 75%, #f0f8ff 100%);
+                z-index: -3;
+            }
+            
+            body::after {
+                content: '';
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: url('{{ background_config.image }}') center center / contain no-repeat;
+                z-index: -2;
+            }
+            {% elif background_config.fit_mode == '100% 100%' %}
+            /* 拉伸填满模式：强制填满整个视窗 */
+            body::before {
+                content: '';
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: url('{{ background_config.image }}') center center / 100% 100% no-repeat;
+                z-index: -2;
+            }
+            {% else %}
+            /* 覆盖填满模式（默认）：完全覆盖，可能裁剪 */
+            body::before {
+                content: '';
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: url('{{ background_config.image }}') center center / cover no-repeat;
+                z-index: -2;
+            }
+            {% endif %}
+            
+            /* 保持原有的渐变作为叠加层，增强视觉效果 */
+            .gradient-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(135deg, rgba(227, 242, 253, 0.2) 0%, rgba(187, 222, 251, 0.2) 25%, rgba(144, 202, 249, 0.2) 50%, rgba(225, 245, 254, 0.2) 75%, rgba(240, 248, 255, 0.2) 100%);
+                z-index: -1;
+                animation: skyGradient 20s ease infinite;
+                pointer-events: none;
+            }
+            
+            /* 调整导航栏透明度以更好地配合自定义背景 */
+            .navbar {
+                background: rgba(255, 255, 255, 0.85) !important;
+                backdrop-filter: blur(15px);
+            }
+            
+            /* 调整卡片透明度 */
+            .card {
+                background-color: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(15px);
+            }
+            
+            /* 为contain模式优化内容可读性 */
+            {% if background_config.fit_mode == 'contain' %}
+            .card {
+                background-color: rgba(255, 255, 255, 0.98);
+                backdrop-filter: blur(20px);
+            }
+            {% endif %}
+        </style>
         {% endif %}
-        
-        /* 保持原有的渐变作为叠加层，增强视觉效果 */
-        .gradient-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, rgba(227, 242, 253, 0.2) 0%, rgba(187, 222, 251, 0.2) 25%, rgba(144, 202, 249, 0.2) 50%, rgba(225, 245, 254, 0.2) 75%, rgba(240, 248, 255, 0.2) 100%);
-            z-index: -1;
-            animation: skyGradient 20s ease infinite;
-            pointer-events: none;
-        }
-        
-        /* 调整导航栏透明度以更好地配合自定义背景 */
-        .navbar {
-            background: rgba(255, 255, 255, 0.85) !important;
-            backdrop-filter: blur(15px);
-        }
-        
-        /* 调整卡片透明度 */
-        .card {
-            background-color: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(15px);
-        }
-        
-        /* 为contain模式优化内容可读性 */
-        {% if background_fit_mode == 'contain' %}
-        .card {
-            background-color: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-        }
-        {% endif %}
-    </style>
     {% endif %}
 </head>
 <body>
     <!-- 渐变覆盖层（仅在有自定义背景时显示） -->
-    {% if background_image %}
+    {% if background_config and background_config.type == 'custom' and background_config.image %}
     <div class="gradient-overlay"></div>
     {% endif %}
     

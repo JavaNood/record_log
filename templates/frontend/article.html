@@ -5,6 +5,103 @@
 {% block extra_css %}
 <style>
 /* 文章详情页样式 */
+.article-container {
+    display: flex;
+    gap: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.toc-sidebar {
+    flex: 0 0 250px;
+    position: sticky;
+    top: 2rem;
+    height: fit-content;
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.toc-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #007bff;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.toc-content {
+    font-size: 0.9rem;
+}
+
+.toc-content ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.toc-content li {
+    margin: 0.25rem 0;
+}
+
+.toc-content a {
+    color: #6c757d;
+    text-decoration: none;
+    display: block;
+    padding: 0.3rem 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+}
+
+.toc-content a:hover {
+    color: #007bff;
+    background-color: rgba(0, 123, 255, 0.1);
+    border-left-color: #007bff;
+    text-decoration: none;
+}
+
+.toc-content a.active {
+    color: #007bff;
+    background-color: rgba(0, 123, 255, 0.15);
+    border-left-color: #007bff;
+    font-weight: 500;
+}
+
+/* 多级目录缩进 */
+.toc-content ul ul {
+    margin-left: 1rem;
+}
+
+.toc-content ul ul a {
+    font-size: 0.85rem;
+    color: #8e9297;
+}
+
+.toc-content ul ul ul {
+    margin-left: 0.8rem;
+}
+
+.toc-content ul ul ul a {
+    font-size: 0.8rem;
+    color: #adb5bd;
+}
+
+.article-main {
+    flex: 1;
+    min-width: 0;
+}
+
 .article-header {
     text-align: center;
     padding: 3rem 0 2rem;
@@ -62,6 +159,7 @@
     margin-bottom: 1rem;
     color: #2c3e50;
     font-weight: 600;
+    position: relative;
 }
 
 .article-content h1 {
@@ -78,6 +176,21 @@
 
 .article-content h3 {
     font-size: 1.3rem;
+}
+
+.article-content h1:target,
+.article-content h2:target,
+.article-content h3:target,
+.article-content h4:target,
+.article-content h5:target,
+.article-content h6:target {
+    scroll-margin-top: 2rem;
+    animation: highlight-target 2s ease-in-out;
+}
+
+@keyframes highlight-target {
+    0% { background-color: rgba(0, 123, 255, 0.2); }
+    100% { background-color: transparent; }
 }
 
 .article-content p {
@@ -164,7 +277,7 @@
 /* 返回首页按钮 */
 .back-home {
     position: fixed;
-    left: 20px;
+    right: 20px;
     top: 50%;
     transform: translateY(-50%);
     z-index: 100;
@@ -192,6 +305,35 @@
 }
 
 /* 响应式设计 */
+@media (max-width: 1200px) {
+    .article-container {
+        max-width: 100%;
+    }
+    
+    .toc-sidebar {
+        flex: 0 0 220px;
+    }
+}
+
+@media (max-width: 992px) {
+    .article-container {
+        flex-direction: column;
+    }
+    
+    .toc-sidebar {
+        position: relative;
+        top: auto;
+        flex: none;
+        max-height: 300px;
+        order: 2;
+        margin-top: 2rem;
+    }
+    
+    .article-main {
+        order: 1;
+    }
+}
+
 @media (max-width: 768px) {
     .article-title {
         font-size: 2rem;
@@ -226,6 +368,11 @@
         padding: 0.75rem 1.5rem;
         border-radius: 25px;
     }
+    
+    .toc-sidebar {
+        padding: 1rem;
+        max-height: 250px;
+    }
 }
 
 @media (max-width: 576px) {
@@ -235,6 +382,11 @@
     
     .article-content {
         padding: 0 1rem;
+    }
+    
+    .article-container {
+        padding: 0 0.5rem;
+        gap: 1rem;
     }
 }
 </style>
@@ -249,92 +401,112 @@
     </a>
 </div>
 
-<article class="container">
-    <!-- 文章头部 -->
-    <header class="article-header">
-        <h1 class="article-title">{{ article.title }}</h1>
-        
-        <!-- 文章元信息 -->
-        <div class="article-meta">
-            <div class="article-meta-item">
-                <i class="fas fa-calendar-alt"></i>
-                <span>{{ article.created_at.strftime('%Y年%m月%d日') }}</span>
+<div class="container-fluid">
+    <div class="article-container">
+        <!-- 左侧目录导航 -->
+        {% if article_toc %}
+        <aside class="toc-sidebar">
+            <div class="toc-title">
+                <i class="fas fa-list"></i>
+                文章目录
             </div>
-            
-            {% if article.updated_at and article.updated_at != article.created_at %}
-            <div class="article-meta-item">
-                <i class="fas fa-edit"></i>
-                <span>更新于 {{ article.updated_at.strftime('%Y年%m月%d日') }}</span>
+            <div class="toc-content">
+                {{ article_toc | safe }}
             </div>
-            {% endif %}
-            
-            <div class="article-meta-item">
-                <i class="fas fa-eye"></i>
-                <span>{{ article.view_count }} 次浏览</span>
-            </div>
-            
-            {% if article.author %}
-            <div class="article-meta-item">
-                <i class="fas fa-user"></i>
-                <span>{{ article.author }}</span>
-            </div>
-            {% endif %}
-        </div>
-        
-        <!-- 文章标识 -->
-        <div class="article-badges">
-            {% if article.is_top %}
-                <span class="badge bg-warning text-dark">
-                    <i class="fas fa-thumbtack"></i> 置顶
-                </span>
-            {% endif %}
-            
-            {% if article.permission == 'verify' %}
-                <span class="badge bg-secondary">
-                    <i class="fas fa-lock"></i> 需要验证
-                </span>
-            {% else %}
-                <span class="badge bg-success">
-                    <i class="fas fa-unlock"></i> 公开
-                </span>
-            {% endif %}
-            
-            {% if article.tags %}
-                {% for tag in article.tags %}
-                <span class="badge me-1" style="background-color: {{ tag.color }}; color: white;">
-                    <i class="fas fa-tag"></i> {{ tag.name }}
-                </span>
-                {% endfor %}
-            {% endif %}
-        </div>
-    </header>
-    
-    <!-- 文章内容 -->
-    <div class="article-content">
-        {% if article.content %}
-            {{ article.content | markdown | safe }}
-        {% else %}
-            <div class="text-center text-muted py-5">
-                <i class="fas fa-file-alt fa-3x mb-3"></i>
-                <p>暂无内容</p>
-            </div>
+        </aside>
         {% endif %}
-    </div>
-    
-    <!-- 文章底部信息 -->
-    <div class="text-center mt-5 pt-4 border-top">
-        <p class="text-muted small">
-            <i class="fas fa-heart text-danger"></i> 
-            感谢您的阅读！如果觉得文章有帮助，欢迎分享给朋友。
-        </p>
         
-        <div class="mt-3">
-            <a href="{{ url_for('frontend.index') }}" class="btn btn-outline-primary">
-                <i class="fas fa-home"></i> 返回首页
-            </a>
-        </div>
+        <!-- 主要内容区域 -->
+        <main class="article-main">
+            <article>
+                <!-- 文章头部 -->
+                <header class="article-header">
+                    <h1 class="article-title">{{ article.title }}</h1>
+                    
+                    <!-- 文章元信息 -->
+                    <div class="article-meta">
+                        <div class="article-meta-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>{{ article.created_at.strftime('%Y年%m月%d日') }}</span>
+                        </div>
+                        
+                        {% if article.updated_at and article.updated_at != article.created_at %}
+                        <div class="article-meta-item">
+                            <i class="fas fa-edit"></i>
+                            <span>更新于 {{ article.updated_at.strftime('%Y年%m月%d日') }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="article-meta-item">
+                            <i class="fas fa-eye"></i>
+                            <span>{{ article.view_count }} 次浏览</span>
+                        </div>
+                        
+                        {% if article.author %}
+                        <div class="article-meta-item">
+                            <i class="fas fa-user"></i>
+                            <span>{{ article.author }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- 文章标识 -->
+                    <div class="article-badges">
+                        {% if article.is_top %}
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-thumbtack"></i> 置顶
+                            </span>
+                        {% endif %}
+                        
+                        {% if article.permission == 'verify' %}
+                            <span class="badge bg-secondary">
+                                <i class="fas fa-lock"></i> 需要验证
+                            </span>
+                        {% else %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-unlock"></i> 公开
+                            </span>
+                        {% endif %}
+                        
+                        {% if article.tags %}
+                            {% for tag in article.tags %}
+                            <span class="badge me-1" style="background-color: {{ tag.color }}; color: white;">
+                                <i class="fas fa-tag"></i> {{ tag.name }}
+                            </span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </header>
+                
+                <!-- 文章内容 -->
+                <div class="article-content">
+                    {% if article_html %}
+                        {{ article_html | safe }}
+                    {% else %}
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-file-alt fa-3x mb-3"></i>
+                            <p>暂无内容</p>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- 文章底部信息 -->
+                <div class="text-center mt-5 pt-4 border-top">
+                    <p class="text-muted small">
+                        <i class="fas fa-heart text-danger"></i> 
+                        感谢您的阅读！如果觉得文章有帮助，欢迎分享给朋友。
+                    </p>
+                    
+                    <div class="mt-3">
+                        <a href="{{ url_for('frontend.index') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-home"></i> 返回首页
+                        </a>
+                    </div>
+                </div>
+            </article>
+        </main>
     </div>
-</article>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -350,22 +522,108 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // 平滑滚动到锚点
-    const anchorLinks = document.querySelectorAll('a[href^="#"]');
-    anchorLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            const targetId = this.getAttribute('href').substring(1);
-            const targetElement = document.getElementById(targetId);
-            
-            if (targetElement) {
+    // 目录导航功能
+    const tocSidebar = document.querySelector('.toc-sidebar');
+    const tocLinks = document.querySelectorAll('.toc-content a');
+    const headings = document.querySelectorAll('.article-content h1, .article-content h2, .article-content h3, .article-content h4, .article-content h5, .article-content h6');
+    
+    if (tocSidebar && tocLinks.length > 0 && headings.length > 0) {
+        // 平滑滚动到锚点
+        tocLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
                 e.preventDefault();
-                targetElement.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }
+                const targetId = this.getAttribute('href').substring(1);
+                const targetElement = document.getElementById(targetId);
+                
+                if (targetElement) {
+                    // 计算滚动位置，考虑固定导航栏等
+                    const offsetTop = targetElement.offsetTop - 80;
+                    
+                    window.scrollTo({
+                        top: offsetTop,
+                        behavior: 'smooth'
+                    });
+                    
+                    // 更新活跃状态
+                    updateActiveTocLink(this);
+                }
+            });
         });
-    });
+        
+        // 滚动监听，高亮当前章节
+        let isScrolling = false;
+        
+        function updateActiveTocLink(activeLink) {
+            tocLinks.forEach(link => link.classList.remove('active'));
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+        }
+        
+        function getCurrentHeading() {
+            const scrollTop = window.scrollY + 100; // 偏移量
+            let currentHeading = null;
+            
+            for (let i = headings.length - 1; i >= 0; i--) {
+                const heading = headings[i];
+                if (heading.offsetTop <= scrollTop) {
+                    currentHeading = heading;
+                    break;
+                }
+            }
+            
+            return currentHeading;
+        }
+        
+        function onScroll() {
+            if (isScrolling) return;
+            
+            requestAnimationFrame(() => {
+                const currentHeading = getCurrentHeading();
+                
+                if (currentHeading) {
+                    const headingId = currentHeading.getAttribute('id');
+                    if (headingId) {
+                        const activeLink = document.querySelector(`.toc-content a[href="#${headingId}"]`);
+                        updateActiveTocLink(activeLink);
+                    }
+                }
+                
+                isScrolling = false;
+            });
+            
+            isScrolling = true;
+        }
+        
+        // 监听滚动事件
+        window.addEventListener('scroll', onScroll, { passive: true });
+        
+        // 初始化当前位置
+        onScroll();
+        
+        // 目录折叠功能（移动端）
+        const tocTitle = document.querySelector('.toc-title');
+        const tocContent = document.querySelector('.toc-content');
+        
+        if (tocTitle && tocContent && window.innerWidth <= 992) {
+            tocTitle.style.cursor = 'pointer';
+            tocTitle.addEventListener('click', function() {
+                if (tocContent.style.display === 'none') {
+                    tocContent.style.display = 'block';
+                    this.innerHTML = '<i class="fas fa-list"></i> 文章目录';
+                } else {
+                    tocContent.style.display = 'none';
+                    this.innerHTML = '<i class="fas fa-chevron-down"></i> 点击展开目录';
+                }
+            });
+            
+            // 移动端默认折叠
+            if (window.innerWidth <= 768) {
+                tocContent.style.display = 'none';
+                tocTitle.innerHTML = '<i class="fas fa-chevron-down"></i> 点击展开目录';
+            }
+        }
+    }
     
     // 代码块复制功能
     const codeBlocks = document.querySelectorAll('pre code');
@@ -394,6 +652,72 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+    
+    // 图片点击放大功能
+    const images = document.querySelectorAll('.article-content img');
+    images.forEach(img => {
+        img.style.cursor = 'pointer';
+        img.addEventListener('click', function() {
+            // 创建模态框显示大图
+            const modal = document.createElement('div');
+            modal.className = 'position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+            modal.style.zIndex = '9999';
+            modal.style.cursor = 'pointer';
+            
+            const modalImg = document.createElement('img');
+            modalImg.src = this.src;
+            modalImg.style.maxWidth = '90%';
+            modalImg.style.maxHeight = '90%';
+            modalImg.style.objectFit = 'contain';
+            modalImg.style.borderRadius = '8px';
+            
+            modal.appendChild(modalImg);
+            document.body.appendChild(modal);
+            
+            // 点击关闭
+            modal.addEventListener('click', function() {
+                document.body.removeChild(modal);
+            });
+            
+            // ESC键关闭
+            document.addEventListener('keydown', function closeModal(e) {
+                if (e.key === 'Escape') {
+                    if (document.body.contains(modal)) {
+                        document.body.removeChild(modal);
+                    }
+                    document.removeEventListener('keydown', closeModal);
+                }
+            });
+        });
+    });
+    
+    // 响应式目录处理
+    function handleResponsiveToc() {
+        const tocSidebar = document.querySelector('.toc-sidebar');
+        const tocContent = document.querySelector('.toc-content');
+        const tocTitle = document.querySelector('.toc-title');
+        
+        if (!tocSidebar || !tocContent || !tocTitle) return;
+        
+        if (window.innerWidth <= 768) {
+            if (!tocTitle.hasAttribute('data-responsive-set')) {
+                tocContent.style.display = 'none';
+                tocTitle.innerHTML = '<i class="fas fa-chevron-down"></i> 点击展开目录';
+                tocTitle.setAttribute('data-responsive-set', 'true');
+            }
+        } else {
+            if (tocTitle.hasAttribute('data-responsive-set')) {
+                tocContent.style.display = 'block';
+                tocTitle.innerHTML = '<i class="fas fa-list"></i> 文章目录';
+                tocTitle.removeAttribute('data-responsive-set');
+            }
+        }
+    }
+    
+    // 监听窗口大小变化
+    window.addEventListener('resize', handleResponsiveToc);
+    handleResponsiveToc(); // 初始化
 });
 </script>
 {% endblock %} 

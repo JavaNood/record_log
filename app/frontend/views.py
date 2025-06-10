@@ -12,6 +12,54 @@ from .. import db
 from sqlalchemy.orm import joinedload
 
 
+def get_current_background():
+    """获取当前应该显示的背景"""
+    background_type = Config.get_value('background_type', 'custom')
+    time_based = Config.get_value('background_time_based', 'False') == 'True'
+    
+    if background_type == 'preset':
+        current_preset = Config.get_value('background_preset', 'sky')
+        
+        # 如果开启了时间变化，根据当前时间选择背景
+        if time_based:
+            from datetime import datetime
+            now = datetime.now()
+            hour = now.hour
+            
+            if 6 <= hour < 11:
+                time_preset = 'spring'  # 春日暖阳
+            elif 11 <= hour < 15:
+                time_preset = 'sky'     # 蓝天白云
+            elif 15 <= hour < 18:
+                time_preset = 'ocean'   # 深海蓝调
+            elif 18 <= hour < 22:
+                time_preset = 'sunset'  # 黄昏夕阳
+            else:
+                time_preset = 'night'   # 星空夜晚
+            
+            current_preset = time_preset
+        
+        # 获取预设背景的渐变样式
+        from ..admin.views import PRESET_BACKGROUNDS
+        if current_preset in PRESET_BACKGROUNDS:
+            return {
+                'type': 'preset',
+                'preset': current_preset,
+                'gradient': PRESET_BACKGROUNDS[current_preset]['gradient'],
+                'name': PRESET_BACKGROUNDS[current_preset]['name']
+            }
+    
+    # 返回自定义背景或默认背景
+    background_image = Config.get_value('background_image', '')
+    background_fit_mode = Config.get_value('background_fit_mode', 'cover')
+    
+    return {
+        'type': 'custom',
+        'image': background_image,
+        'fit_mode': background_fit_mode
+    }
+
+
 def parse_custom_date(date_str):
     """解析自定义日期格式：YYYY, YYYYMM, YYYYMMDD"""
     if not date_str:
@@ -40,17 +88,8 @@ def parse_custom_date(date_str):
     return None
 
 
-@frontend.route('/')
-def index():
-    """首页视图 - 显示文章列表和分页"""
-    page = request.args.get('page', 1, type=int)
-    time_range = request.args.get('range', 'all')  # 时间范围筛选
-    custom_date = request.args.get('date', '')  # 自定义日期
-    tag_filter = request.args.get('tag', '')  # 标签筛选
-    permission_filter = request.args.get('permission', 'all')  # 权限筛选
-    per_page = 10  # 每页显示10篇文章
-    
-    # 构建查询
+def build_article_query(time_range='all', custom_date='', tag_filter='', permission_filter='all'):
+    """构建文章查询，应用所有筛选条件"""
     query = Article.query.filter_by(status='published')
     
     # 根据时间范围筛选
@@ -99,9 +138,26 @@ def index():
     elif permission_filter == 'verify':
         query = query.filter(Article.permission == 'verify')
     
+    return query
+
+
+@frontend.route('/')
+def index():
+    """首页视图 - 显示文章列表和分页"""
+    page = request.args.get('page', 1, type=int)
+    time_range = request.args.get('range', 'all')  # 时间范围筛选
+    custom_date = request.args.get('date', '')  # 自定义日期
+    tag_filter = request.args.get('tag', '')  # 标签筛选
+    permission_filter = request.args.get('permission', 'all')  # 权限筛选
+    timeline_order = request.args.get('timeline_order', 'created')  # 时间线排序方式
+    per_page = 10  # 每页显示10篇文章
+    
+    # 构建基础查询（应用所有筛选条件）
+    base_query = build_article_query(time_range, custom_date, tag_filter, permission_filter)
+    
     # 获取已发布的文章列表，按置顶和时间排序
     # 优化：预加载标签关联以减少N+1查询
-    articles = query.options(joinedload(Article.tags)).order_by(
+    articles = base_query.options(joinedload(Article.tags)).order_by(
         Article.is_top.desc(),  # 置顶文章优先
         Article.created_at.desc()  # 然后按创建时间倒序
     ).paginate(
@@ -113,16 +169,23 @@ def index():
     # 获取所有标签（用于筛选器）
     all_tags = Tag.query.order_by(Tag.name).all()
     
-    # 获取Top文章（按浏览量）
-    top_articles = Article.query.filter_by(status='published').order_by(
+    # 获取热门文章（按浏览量，应用相同的筛选条件）
+    top_articles = build_article_query(time_range, custom_date, tag_filter, permission_filter).order_by(
         Article.view_count.desc()
     ).limit(5).all()
     
-    # 获取时间线文章（不受分页限制，用于导航）
-    timeline_articles = Article.query.filter_by(status='published').order_by(
-        Article.is_top.desc(),
-        Article.created_at.desc()
-    ).limit(50).all()
+    # 获取时间线文章（应用相同的筛选条件，不受分页限制，用于导航）
+    timeline_base_query = build_article_query(time_range, custom_date, tag_filter, permission_filter)
+    if timeline_order == 'updated':
+        timeline_articles = timeline_base_query.order_by(
+            Article.is_top.desc(),
+            Article.updated_at.desc()
+        ).limit(50).all()
+    else:
+        timeline_articles = timeline_base_query.order_by(
+            Article.is_top.desc(),
+            Article.created_at.desc()
+        ).limit(50).all()
     
     # 获取欢迎语配置
     welcome_title = Config.get_value('homepage_welcome_title', '欢迎来到我的个人博客')
@@ -132,9 +195,8 @@ def index():
     from sqlalchemy import func
     total_views = db.session.query(func.sum(Article.view_count)).filter_by(status='published').scalar() or 0
     
-    # 获取背景图片配置
-    background_image = Config.get_value('background_image', '')
-    background_fit_mode = Config.get_value('background_fit_mode', 'cover')
+    # 获取背景配置
+    background_config = get_current_background()
     
     return render_template(
         'frontend/index.html', 
@@ -143,13 +205,13 @@ def index():
         custom_date=custom_date,
         tag_filter=tag_filter,
         permission_filter=permission_filter,
+        timeline_order=timeline_order,
         all_tags=all_tags,
         top_articles=top_articles,
         timeline_articles=timeline_articles,
         welcome_title=welcome_title,
         welcome_subtitle=welcome_subtitle,
-        background_image=background_image,
-        background_fit_mode=background_fit_mode,
+        background_config=background_config,
         total_views=total_views
     )
 
@@ -157,66 +219,21 @@ def index():
 @frontend.route('/search')
 def search():
     """搜索功能"""
-    query = request.args.get('q', '').strip()
+    search_query = request.args.get('q', '').strip()
     time_range = request.args.get('range', 'all')  # 时间范围筛选
     custom_date = request.args.get('date', '')  # 自定义日期
     tag_filter = request.args.get('tag', '')  # 标签筛选
     permission_filter = request.args.get('permission', 'all')  # 权限筛选
+    timeline_order = request.args.get('timeline_order', 'created')  # 时间线排序方式
     page = request.args.get('page', 1, type=int)
     per_page = 10
     
-    # 构建基础查询
-    base_query = Article.query.filter(Article.status == 'published')
+    # 构建基础查询（应用所有筛选条件）
+    base_query = build_article_query(time_range, custom_date, tag_filter, permission_filter)
     
-    # 根据时间范围筛选
-    if time_range == 'custom' and custom_date:
-        start_date = parse_custom_date(custom_date)
-        if start_date:
-            # 根据日期格式确定结束日期
-            date_str = re.sub(r'[^\d]', '', custom_date)
-            if len(date_str) == 4:  # 年份：整年
-                end_date = datetime(start_date.year + 1, 1, 1)
-            elif len(date_str) == 6:  # 年月：整月
-                if start_date.month == 12:
-                    end_date = datetime(start_date.year + 1, 1, 1)
-                else:
-                    end_date = datetime(start_date.year, start_date.month + 1, 1)
-            else:  # 具体日期：当天
-                end_date = start_date + timedelta(days=1)
-            
-            base_query = base_query.filter(
-                Article.created_at >= start_date,
-                Article.created_at < end_date
-            )
-    elif time_range != 'all':
-        now = datetime.now()
-        if time_range == 'week':
-            start_date = now - timedelta(days=7)
-        elif time_range == 'month':
-            start_date = now - timedelta(days=30)
-        elif time_range == 'quarter':
-            start_date = now - timedelta(days=90)
-        elif time_range == 'year':
-            start_date = now - timedelta(days=365)
-        else:
-            start_date = None
-            
-        if start_date:
-            base_query = base_query.filter(Article.created_at >= start_date)
-    
-    # 根据标签筛选
-    if tag_filter:
-        base_query = base_query.join(Article.tags).filter(Tag.name == tag_filter)
-    
-    # 根据权限筛选
-    if permission_filter == 'public':
-        base_query = base_query.filter(Article.permission == 'public')
-    elif permission_filter == 'verify':
-        base_query = base_query.filter(Article.permission == 'verify')
-    
-    if query:
+    if search_query:
         # 简化搜索：单关键词标题搜索，优化：预加载标签关联
-        articles = base_query.options(joinedload(Article.tags)).filter(Article.title.contains(query)).order_by(
+        articles = base_query.options(joinedload(Article.tags)).filter(Article.title.contains(search_query)).order_by(
             Article.is_top.desc(),
             Article.created_at.desc()
         ).paginate(
@@ -238,16 +255,23 @@ def search():
     # 获取所有标签（用于筛选器）
     all_tags = Tag.query.order_by(Tag.name).all()
     
-    # 获取Top文章（按浏览量）
-    top_articles = Article.query.filter_by(status='published').order_by(
+    # 获取热门文章（按浏览量，应用相同的筛选条件）
+    top_articles = build_article_query(time_range, custom_date, tag_filter, permission_filter).order_by(
         Article.view_count.desc()
     ).limit(5).all()
     
-    # 获取时间线文章（不受分页限制，用于导航）
-    timeline_articles = Article.query.filter_by(status='published').order_by(
-        Article.is_top.desc(),
-        Article.created_at.desc()
-    ).limit(50).all()
+    # 获取时间线文章（应用相同的筛选条件，不受分页限制，用于导航）
+    timeline_base_query = build_article_query(time_range, custom_date, tag_filter, permission_filter)
+    if timeline_order == 'updated':
+        timeline_articles = timeline_base_query.order_by(
+            Article.is_top.desc(),
+            Article.updated_at.desc()
+        ).limit(50).all()
+    else:
+        timeline_articles = timeline_base_query.order_by(
+            Article.is_top.desc(),
+            Article.created_at.desc()
+        ).limit(50).all()
     
     # 获取欢迎语配置
     welcome_title = Config.get_value('homepage_welcome_title', '欢迎来到我的个人博客')
@@ -257,25 +281,24 @@ def search():
     from sqlalchemy import func
     total_views = db.session.query(func.sum(Article.view_count)).filter_by(status='published').scalar() or 0
     
-    # 获取背景图片配置
-    background_image = Config.get_value('background_image', '')
-    background_fit_mode = Config.get_value('background_fit_mode', 'cover')
+    # 获取背景配置
+    background_config = get_current_background()
     
     return render_template(
         'frontend/index.html', 
         articles=articles, 
-        search_query=query, 
+        search_query=search_query, 
         time_range=time_range, 
         custom_date=custom_date,
         tag_filter=tag_filter,
         permission_filter=permission_filter,
+        timeline_order=timeline_order,
         all_tags=all_tags,
         top_articles=top_articles,
         timeline_articles=timeline_articles,
         welcome_title=welcome_title,
         welcome_subtitle=welcome_subtitle,
-        background_image=background_image,
-        background_fit_mode=background_fit_mode,
+        background_config=background_config,
         total_views=total_views
     )
 
@@ -310,11 +333,39 @@ def article_detail(article_id):
             # 未验证，返回验证页面
             return render_template('frontend/verify.html', article=article)
     
+    # 生成文章内容和目录
+    article_html = ''
+    article_toc = ''
+    if article.content:
+        # 配置Markdown扩展，生成目录
+        md = markdown.Markdown(
+            extensions=[
+                'markdown.extensions.fenced_code',  # 代码块支持
+                'markdown.extensions.tables',       # 表格支持
+                'markdown.extensions.toc',          # 目录支持
+                'markdown.extensions.nl2br',        # 换行支持
+            ],
+            extension_configs={
+                'markdown.extensions.toc': {
+                    'title': '文章目录',
+                    'anchorlink': False,
+                    'permalink': False
+                }
+            }
+        )
+        
+        # 转换markdown
+        article_html = md.convert(article.content)
+        article_toc = md.toc
+    
     # 增加浏览数（只有成功访问文章时才增加）
     article.view_count += 1
     db.session.commit()
     
-    return render_template('frontend/article.html', article=article)
+    return render_template('frontend/article.html', 
+                         article=article, 
+                         article_html=article_html,
+                         article_toc=article_toc)
 
 
 @frontend.route('/verify_article', methods=['POST'])
@@ -366,6 +417,61 @@ def verify_article():
         return jsonify({'success': False, 'message': '答案错误，请重试'})
 
 
+@frontend.route('/api/article-page/<int:article_id>')
+def get_article_page(article_id):
+    """获取文章所在的页面API"""
+    try:
+        # 获取当前筛选参数
+        time_range = request.args.get('range', 'all')
+        custom_date = request.args.get('date', '')
+        tag_filter = request.args.get('tag', '')
+        permission_filter = request.args.get('permission', 'all')
+        search_query = request.args.get('q', '')
+        per_page = 10
+        
+        # 构建基础查询（使用统一的查询构建函数）
+        base_query = build_article_query(time_range, custom_date, tag_filter, permission_filter)
+        
+        # 应用搜索筛选
+        if search_query:
+            base_query = base_query.filter(Article.title.contains(search_query))
+        
+        # 按置顶和创建时间排序（与首页排序逻辑保持一致）
+        ordered_query = base_query.order_by(
+            Article.is_top.desc(),
+            Article.created_at.desc()
+        )
+        
+        # 获取所有符合条件的文章ID列表
+        all_article_ids = [article.id for article in ordered_query.all()]
+        
+        # 检查目标文章是否在结果中
+        if article_id not in all_article_ids:
+            return jsonify({
+                'success': False, 
+                'message': '文章在当前筛选条件下不可见'
+            })
+        
+        # 计算文章在结果中的位置（从0开始）
+        article_position = all_article_ids.index(article_id)
+        
+        # 计算页码（从1开始）
+        page_number = (article_position // per_page) + 1
+        
+        return jsonify({
+            'success': True,
+            'page': page_number,
+            'position': article_position + 1,
+            'total': len(all_article_ids)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False, 
+            'message': f'查询失败: {str(e)}'
+        })
+
+
 # 添加Markdown渲染过滤器
 @frontend.app_template_filter('markdown')
 def markdown_filter(text):
@@ -383,7 +489,9 @@ def markdown_filter(text):
         ],
         extension_configs={
             'markdown.extensions.toc': {
-                'title': '目录'
+                'title': '目录',
+                'anchorlink': False,
+                'permalink': False
             }
         }
     )

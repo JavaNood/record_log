@@ -4,6 +4,7 @@
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from . import db
+from .utils import get_local_now
 
 
 # 文章标签关联表
@@ -34,8 +35,8 @@ class Article(db.Model):
     is_top = db.Column(db.Boolean, default=False, nullable=False)  # 是否置顶
     view_count = db.Column(db.Integer, default=0, nullable=False)  # 浏览数
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=get_local_now, nullable=False)
+    updated_at = db.Column(db.DateTime, default=get_local_now, onupdate=get_local_now, nullable=False)
     
     # 关联关系
     tags = db.relationship('Tag', secondary=article_tags, backref=db.backref('articles', lazy='dynamic'))
@@ -69,7 +70,7 @@ class Tag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False, index=True)
     color = db.Column(db.String(7), default='#007bff', nullable=False)  # 标签颜色
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=get_local_now, nullable=False)
     
     def __repr__(self):
         return f'<Tag {self.name}>'
@@ -93,7 +94,7 @@ class Admin(db.Model):
     username = db.Column(db.String(50), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     email = db.Column(db.String(100))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=get_local_now, nullable=False)
     
     def set_password(self, password):
         """设置密码"""
@@ -122,7 +123,7 @@ class Config(db.Model):
     
     key_name = db.Column(db.String(50), primary_key=True)
     value = db.Column(db.Text)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=get_local_now, onupdate=get_local_now, nullable=False)
     
     def __repr__(self):
         return f'<Config {self.key_name}>'
@@ -139,7 +140,7 @@ class Config(db.Model):
         config = Config.query.get(key)
         if config:
             config.value = value
-            config.updated_at = datetime.utcnow()
+            config.updated_at = get_local_now()
         else:
             config = Config(key_name=key, value=value)
             db.session.add(config)
@@ -164,7 +165,7 @@ class SiteVisit(db.Model):
     session_id = db.Column(db.String(255), nullable=False, index=True)
     user_agent = db.Column(db.Text)  # 用户代理信息
     referer = db.Column(db.String(255))  # 来源页面
-    visit_time = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    visit_time = db.Column(db.DateTime, default=get_local_now, nullable=False, index=True)
     page_url = db.Column(db.String(255))  # 访问的页面URL
     
     def __repr__(self):

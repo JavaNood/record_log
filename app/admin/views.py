@@ -15,6 +15,7 @@ from ..auth import (
 )
 from ..models import Article, Tag, Config
 from .. import db
+from ..utils import get_local_now
 
 
 # 允许的图片格式
@@ -178,8 +179,8 @@ def new_article():
                 status=form.status.data,
                 is_top=form.is_top.data,
                 view_count=form.view_count.data or 0,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=get_local_now(),
+                updated_at=get_local_now()
             )
             
             # 处理标签关联
@@ -246,7 +247,7 @@ def edit_article(article_id):
             article.status = form.status.data
             article.is_top = form.is_top.data
             article.view_count = form.view_count.data or 0
-            article.updated_at = datetime.utcnow()
+            article.updated_at = get_local_now()
             
             # 处理标签关联
             selected_tag_ids = form.tags.data
@@ -384,7 +385,7 @@ def toggle_article_status(article_id):
             article.status = 'published'
             new_status_text = '已发布'
         
-        article.updated_at = datetime.utcnow()
+        article.updated_at = get_local_now()
         db.session.commit()
         
         return jsonify({
@@ -438,7 +439,7 @@ def batch_change_status():
         for article in articles:
             if article.status != target_status:
                 article.status = target_status
-                article.updated_at = datetime.utcnow()
+                article.updated_at = get_local_now()
                 updated_count += 1
         
         db.session.commit()
@@ -794,12 +795,77 @@ def process_background_image(file_path, blur_level=10, fit_mode='cover'):
         return False
 
 
+# 添加预设背景选项
+PRESET_BACKGROUNDS = {
+    'sky': {
+        'name': '蓝天白云',
+        'gradient': 'linear-gradient(135deg, #74b9ff 0%, #0984e3 50%, #a29bfe 100%)',
+        'description': '清新的蓝天白云背景'
+    },
+    'ocean': {
+        'name': '深海蓝调',
+        'gradient': 'linear-gradient(135deg, #00b894 0%, #00cec9 50%, #6c5ce7 100%)',
+        'description': '宁静的海洋蓝色背景'
+    },
+    'sunset': {
+        'name': '黄昏夕阳',
+        'gradient': 'linear-gradient(135deg, #fdcb6e 0%, #e17055 50%, #d63031 100%)',
+        'description': '温暖的黄昏夕阳背景'
+    },
+    'forest': {
+        'name': '翠绿森林',
+        'gradient': 'linear-gradient(135deg, #00b894 0%, #55a3ff 30%, #1dd1a1 100%)',
+        'description': '清新的森林绿色背景'
+    },
+    'night': {
+        'name': '星空夜晚',
+        'gradient': 'linear-gradient(135deg, #2d3436 0%, #636e72 50%, #74b9ff 100%)',
+        'description': '神秘的星空夜色背景'
+    },
+    'spring': {
+        'name': '春日暖阳',
+        'gradient': 'linear-gradient(135deg, #a8e6cf 0%, #dcedc1 50%, #ffd3a5 100%)',
+        'description': '温暖的春日阳光背景'
+    }
+}
+
+# 时间段对应的背景
+TIME_BASED_BACKGROUNDS = {
+    'morning': 'spring',    # 6-11点：春日暖阳
+    'noon': 'sky',          # 11-15点：蓝天白云
+    'afternoon': 'ocean',   # 15-18点：深海蓝调
+    'evening': 'sunset',    # 18-22点：黄昏夕阳
+    'night': 'night'        # 22-6点：星空夜晚
+}
+
 @admin.route('/background', methods=['GET', 'POST'])
 @login_required
 def background_edit():
     """背景图片设置页面"""
     if request.method == 'POST':
         try:
+            # 处理预设背景选择
+            preset_bg = request.form.get('preset_background')
+            if preset_bg and preset_bg in PRESET_BACKGROUNDS:
+                # 使用预设背景
+                Config.set_value('background_type', 'preset')
+                Config.set_value('background_preset', preset_bg)
+                Config.set_value('background_image', '')  # 清除自定义图片
+                
+                # 获取其他设置
+                time_based = request.form.get('time_based_background') == 'on'
+                Config.set_value('background_time_based', str(time_based))
+                
+                flash('预设背景设置成功！', 'success')
+                return redirect(url_for('admin.background_edit'))
+            
+            # 处理时间变化开关（独立更新）
+            if 'update_time_setting' in request.form:
+                time_based = request.form.get('time_based_background') == 'on'
+                Config.set_value('background_time_based', str(time_based))
+                flash('时间变化设置已更新！', 'success')
+                return redirect(url_for('admin.background_edit'))
+            
             # 处理图片上传
             if 'background_image' in request.files:
                 file = request.files['background_image']
@@ -838,6 +904,7 @@ def background_edit():
                         
                         # 保存新的背景图片配置
                         bg_url = f"/static/images/backgrounds/{unique_filename}"
+                        Config.set_value('background_type', 'custom')
                         Config.set_value('background_image', bg_url)
                         Config.set_value('background_blur_level', str(blur_level))
                         Config.set_value('background_fit_mode', fit_mode)
@@ -880,17 +947,24 @@ def background_edit():
             flash(f'背景设置失败: {str(e)}', 'danger')
     
     # GET请求，显示设置页面
+    background_type = Config.get_value('background_type', 'custom')
     current_bg = Config.get_value('background_image', '')
+    current_preset = Config.get_value('background_preset', 'sky')
     blur_level = int(Config.get_value('background_blur_level', '10'))
     fit_mode = Config.get_value('background_fit_mode', 'cover')
+    time_based = Config.get_value('background_time_based', 'False') == 'True'
     
     current_admin = get_current_admin()
     session_info = get_session_info()
     
     return render_template('admin/background_edit.html',
                          current_background=current_bg,
+                         background_type=background_type,
+                         current_preset=current_preset,
                          blur_level=blur_level,
                          fit_mode=fit_mode,
+                         time_based=time_based,
+                         preset_backgrounds=PRESET_BACKGROUNDS,
                          current_admin=current_admin,
                          session_info=session_info)
 
@@ -910,14 +984,18 @@ def reset_background():
                 except:
                     pass
         
-        # 清除配置
+        # 清除所有背景相关配置
+        Config.set_value('background_type', 'custom')
         Config.set_value('background_image', '')
+        Config.set_value('background_preset', 'sky')
         Config.set_value('background_blur_level', '10')
+        Config.set_value('background_fit_mode', 'cover')
+        Config.set_value('background_time_based', 'False')
         
         return jsonify({'success': True, 'message': '背景已重置为默认'})
         
     except Exception as e:
-        return jsonify({'success': False, 'message': f'重置失败: {str(e)}'}) 
+        return jsonify({'success': False, 'message': f'重置失败: {str(e)}'})
 
 
 # 注释掉公网部署时的密码帮助页面，避免暴露管理员重置方法
