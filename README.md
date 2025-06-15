@@ -79,11 +79,8 @@ CREATE DATABASE record_log DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode
 
 # 5. 修改配置文件 config.py
 # 设置数据库连接
-```python
 class DevelopmentConfig(Config):
     SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://用户名:密码@localhost/数据库名'
-```
-
 # 6. 初始化数据库
 python init_db.py --init
 
@@ -114,10 +111,11 @@ CREATE DATABASE record_log DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode
 
 # 6. 修改配置文件 config.py
 # 设置数据库连接
-```python
+
 class DevelopmentConfig(Config):
     SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://用户名:密码@localhost/数据库名'
-```
+
+
 
 # 7. 初始化数据库
 python init_db.py
@@ -125,13 +123,10 @@ python init_db.py
 # 8. 启动服务
 python run_dev.py
 ```
-
 访问 http://127.0.0.1:5000 查看博客系统
 
 ## ⚙️ 配置说明
 
-
-### 功能配置
 - **评论审核**：`COMMENT_AUTO_APPROVE = False` 开启评论审核
 - **访问限制**：`COMMENT_RATE_LIMIT = 10` 设置评论频率限制
 - **地理位置**：`COMMENT_ENABLE_LOCATION = True` 开启位置功能
