@@ -14,7 +14,8 @@ WTForms==3.0.1
 
 # 内容处理
 Markdown==3.5.1
-Pillow>=9.0.0 
+Pillow>=9.0.0
+requests>=2.28.0 
 
 # 生产环境
 gunicorn>=21.2.0

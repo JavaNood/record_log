@@ -1,0 +1,483 @@
+{% extends "admin/base.html" %}
+
+{% block title %}音乐管理{% endblock %}
+
+{% block page_title %}音乐管理{% endblock %}
+{% block page_subtitle %}管理背景音乐文件和播放设置{% endblock %}
+
+{% block extra_css %}
+<style>
+    .music-upload-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .music-item {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s ease;
+    }
+    
+    .music-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    }
+    
+    .music-info {
+        flex: 1;
+    }
+    
+    .music-title {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+    
+    .music-meta {
+        color: #666;
+        font-size: 0.9rem;
+    }
+    
+    .music-actions {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    
+    .settings-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .volume-slider {
+        width: 100%;
+    }
+    
+    .upload-area {
+        border: 2px dashed rgba(255, 255, 255, 0.3);
+        border-radius: 10px;
+        padding: 2rem;
+        text-align: center;
+        transition: border-color 0.3s ease;
+    }
+    
+    .upload-area:hover {
+        border-color: rgba(255, 255, 255, 0.6);
+    }
+    
+    .upload-area.dragover {
+        border-color: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 音乐设置 -->
+<div class="settings-card">
+    <h4 class="mb-4">
+        <i class="fas fa-cog me-2"></i>音乐播放设置
+    </h4>
+    
+    <form method="POST" action="{{ url_for('admin.music_settings') }}">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="enabled" name="enabled" 
+                           {% if music_enabled %}checked{% endif %}>
+                    <label class="form-check-label" for="enabled">
+                        <strong>启用音乐功能</strong>
+                        <div class="small text-muted">关闭后前端不会显示音乐播放器</div>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="auto_play" name="auto_play" 
+                           {% if music_auto_play %}checked{% endif %}>
+                    <label class="form-check-label" for="auto_play">
+                        <strong>自动播放音乐</strong>
+                        <div class="small text-muted">用户进入网站时自动播放随机音乐</div>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <label for="default_volume" class="form-label">
+                    <strong>默认音量</strong>
+                    <span class="text-muted">(<span id="volume-display">{{ (music_default_volume * 100)|int }}</span>%)</span>
+                </label>
+                <input type="range" class="form-range volume-slider" id="default_volume" name="default_volume" 
+                       min="0" max="1" step="0.01" value="{{ music_default_volume }}">
+            </div>
+        </div>
+        
+        <div class="text-end">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>保存设置
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- 音乐上传 -->
+<div class="music-upload-card">
+    <h4 class="mb-4">
+        <i class="fas fa-cloud-upload-alt me-2"></i>上传音乐文件
+    </h4>
+    
+    <form id="music-upload-form" enctype="multipart/form-data">
+        <div class="upload-area" id="upload-area">
+            <i class="fas fa-music fa-3x mb-3 opacity-75"></i>
+            <h5>拖拽音乐文件到此处或点击选择</h5>
+            <p class="mb-3 opacity-75">支持 MP3、WAV、OGG、M4A、AAC、FLAC 格式，最大 20MB</p>
+            <input type="file" id="music-file" name="music" accept=".mp3,.wav,.ogg,.m4a,.aac,.flac" style="display: none;">
+            <button type="button" class="btn btn-outline-light" onclick="document.getElementById('music-file').click()">
+                <i class="fas fa-folder-open me-2"></i>选择文件
+            </button>
+        </div>
+        
+        <div class="row mt-3">
+            <div class="col-md-8">
+                <input type="text" class="form-control" name="display_name" placeholder="音乐显示名称（可选，留空则使用文件名）">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-light w-100" disabled id="upload-btn">
+                    <i class="fas fa-upload me-2"></i>上传音乐
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- 音乐列表 -->
+<div class="admin-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center">
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary me-3" title="返回管理主界面">
+                <i class="fas fa-arrow-left me-1"></i>返回主界面
+            </a>
+            <h4 class="mb-0">
+                <i class="fas fa-list me-2"></i>音乐文件列表
+                <span class="badge bg-primary ms-2">{{ music_files.total }} 个文件</span>
+            </h4>
+        </div>
+    </div>
+    
+    {% if music_files.items %}
+        {% for music in music_files.items %}
+        <div class="music-item d-flex align-items-center" data-music-id="{{ music.id }}">
+            <div class="music-info">
+                <div class="music-title" id="title-{{ music.id }}">{{ music.display_name }}</div>
+                <div class="music-meta">
+                    <span><i class="fas fa-file me-1"></i>{{ music.filename }}</span>
+                    <span class="ms-3"><i class="fas fa-hdd me-1"></i>{{ music.file_size_mb }} MB</span>
+                    <span class="ms-3"><i class="fas fa-clock me-1"></i>{{ music.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+            </div>
+            
+            <div class="music-actions">
+                <div class="form-check form-switch me-3">
+                    <input class="form-check-input" type="checkbox" id="enabled-{{ music.id }}" 
+                           {% if music.is_enabled %}checked{% endif %}
+                           onchange="toggleMusicEnabled({{ music.id }}, this.checked)">
+                    <label class="form-check-label small text-muted" for="enabled-{{ music.id }}">
+                        前端播放
+                    </label>
+                </div>
+                <button class="btn btn-sm btn-outline-primary" onclick="editMusic({{ music.id }}, '{{ music.display_name|e }}')">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteMusic({{ music.id }}, '{{ music.display_name|e }}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <!-- 分页 -->
+        {% if music_files.pages > 1 %}
+        <nav aria-label="音乐列表分页" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if music_files.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.music', page=music_files.prev_num) }}">上一页</a>
+                    </li>
+                {% endif %}
+                
+                {% for page_num in music_files.iter_pages() %}
+                    {% if page_num %}
+                        {% if page_num != music_files.page %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('admin.music', page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">…</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if music_files.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.music', page=music_files.next_num) }}">下一页</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-music fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">暂无音乐文件</h5>
+            <p class="text-muted">请先上传音乐文件</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- 编辑音乐名称模态框 -->
+<div class="modal fade" id="editMusicModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">编辑音乐名称</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="edit-music-form">
+                <div class="modal-body">
+                    <input type="hidden" id="edit-music-id">
+                    <div class="mb-3">
+                        <label for="edit-display-name" class="form-label">显示名称</label>
+                        <input type="text" class="form-control" id="edit-display-name" name="display_name" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 音量滑块实时显示
+document.getElementById('default_volume').addEventListener('input', function() {
+    const volume = Math.round(this.value * 100);
+    document.getElementById('volume-display').textContent = volume;
+});
+
+// 文件上传功能
+const uploadArea = document.getElementById('upload-area');
+const fileInput = document.getElementById('music-file');
+const uploadBtn = document.getElementById('upload-btn');
+const uploadForm = document.getElementById('music-upload-form');
+
+// 拖拽上传
+uploadArea.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+});
+
+uploadArea.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+});
+
+uploadArea.addEventListener('drop', function(e) {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        fileInput.files = files;
+        updateUploadButton();
+    }
+});
+
+// 点击上传区域选择文件
+uploadArea.addEventListener('click', function() {
+    fileInput.click();
+});
+
+// 文件选择变化
+fileInput.addEventListener('change', updateUploadButton);
+
+function updateUploadButton() {
+    if (fileInput.files.length > 0) {
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = '<i class="fas fa-upload me-2"></i>上传 ' + fileInput.files[0].name;
+    } else {
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<i class="fas fa-upload me-2"></i>上传音乐';
+    }
+}
+
+// 上传表单提交
+uploadForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (!fileInput.files.length) {
+        alert('请选择音乐文件');
+        return;
+    }
+    
+    const formData = new FormData(uploadForm);
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>上传中...';
+    
+    fetch('{{ url_for("admin.upload_music") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('上传失败: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('上传失败: ' + error.message);
+    })
+    .finally(() => {
+        uploadBtn.disabled = false;
+        updateUploadButton();
+    });
+});
+
+// 编辑音乐名称
+function editMusic(musicId, currentName) {
+    document.getElementById('edit-music-id').value = musicId;
+    document.getElementById('edit-display-name').value = currentName;
+    new bootstrap.Modal(document.getElementById('editMusicModal')).show();
+}
+
+// 编辑表单提交
+document.getElementById('edit-music-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const musicId = document.getElementById('edit-music-id').value;
+    const displayName = document.getElementById('edit-display-name').value.trim();
+    
+    if (!displayName) {
+        alert('显示名称不能为空');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('display_name', displayName);
+    
+    fetch(`{{ url_for("admin.edit_music", music_id=0) }}`.replace('0', musicId), {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            document.getElementById('title-' + musicId).textContent = displayName;
+            bootstrap.Modal.getInstance(document.getElementById('editMusicModal')).hide();
+        } else {
+            alert('更新失败: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('更新失败: ' + error.message);
+    });
+});
+
+// 切换音乐启用状态
+function toggleMusicEnabled(musicId, enabled) {
+    fetch(`{{ url_for("admin.toggle_music_enabled", music_id=0) }}`.replace('0', musicId), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ enabled: enabled })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 显示简短提示
+            showMessage(data.message, 'success');
+        } else {
+            alert('操作失败: ' + data.message);
+            // 恢复开关状态
+            document.getElementById('enabled-' + musicId).checked = !enabled;
+        }
+    })
+    .catch(error => {
+        alert('操作失败: ' + error.message);
+        // 恢复开关状态
+        document.getElementById('enabled-' + musicId).checked = !enabled;
+    });
+}
+
+// 显示消息提示
+function showMessage(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    
+    alertDiv.appendChild(document.createTextNode(message));
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'btn-close';
+    closeBtn.setAttribute('data-bs-dismiss', 'alert');
+    closeBtn.setAttribute('aria-label', '关闭');
+    alertDiv.appendChild(closeBtn);
+    
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 3000);
+}
+
+// 删除音乐
+function deleteMusic(musicId, musicName) {
+    if (!confirm(`确定要删除音乐《${musicName}》吗？此操作不可恢复。`)) {
+        return;
+    }
+    
+    fetch(`{{ url_for("admin.delete_music", music_id=0) }}`.replace('0', musicId), {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('删除失败: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('删除失败: ' + error.message);
+    });
+}
+</script>
+{% endblock %} 

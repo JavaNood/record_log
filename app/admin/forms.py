@@ -66,6 +66,16 @@ class ArticleEditForm(FlaskForm):
         'placeholder': '请输入文章内容，支持Markdown格式...'
     })
     
+    summary = TextAreaField('前端展示内容', validators=[
+        Optional(),
+        Length(max=500, message='展示内容长度不能超过500个字符')
+    ], render_kw={
+        'class': 'form-control',
+        'id': 'article-summary',
+        'rows': 3,
+        'placeholder': '可选填写，用于首页文章列表展示。如果不填写，将自动截取文章正文前2行内容'
+    })
+    
     # 标签选择字段
     tags = MultiCheckboxField(
         '文章标签',
@@ -103,10 +113,11 @@ class ArticleEditForm(FlaskForm):
     verify_answer = StringField(
         '验证答案',
         validators=[
+            Optional(),
             Length(max=100, message='答案长度不能超过100个字符')
         ],
         render_kw={
-            'placeholder': '请输入验证答案（权限为需要验证时必填）',
+            'placeholder': '请输入验证答案（可选，留空表示允许任意答案）',
             'class': 'form-control',
             'id': 'verify-answer'
         }
@@ -124,6 +135,43 @@ class ArticleEditForm(FlaskForm):
             'class': 'form-control',
             'id': 'article-view-count',
             'min': '0'
+        }
+    )
+    
+    # 自定义点赞数
+    likes_count = IntegerField(
+        '点赞数',
+        validators=[
+            Optional(),
+            NumberRange(min=0, max=99999999, message='点赞数应在0-99999999之间')
+        ],
+        default=0,
+        render_kw={
+            'class': 'form-control',
+            'id': 'article-likes-count',
+            'min': '0'
+        }
+    )
+    
+    # 创建时间 - 使用字符串字段
+    created_at = StringField(
+        '创建时间',
+        validators=[Optional()],
+        render_kw={
+            'class': 'form-control',
+            'id': 'article-created-at',
+            'placeholder': '格式：2025-06-11 21:34:00'
+        }
+    )
+    
+    # 更新时间 - 使用字符串字段
+    updated_at = StringField(
+        '更新时间',
+        validators=[Optional()],
+        render_kw={
+            'class': 'form-control',
+            'id': 'article-updated-at',
+            'placeholder': '格式：2025-06-11 21:34:00'
         }
     )
     
@@ -145,6 +193,27 @@ class ArticleEditForm(FlaskForm):
         render_kw={
             'class': 'form-check-input',
             'id': 'article-is-top'
+        }
+    )
+    
+    allow_comments = BooleanField(
+        '允许评论',
+        default=True,
+        render_kw={
+            'class': 'form-check-input',
+            'id': 'article-allow-comments'
+        }
+    )
+    
+    publish_location = StringField(
+        '发布地址',
+        validators=[
+            Length(max=100, message='发布地址长度不能超过100个字符')
+        ],
+        render_kw={
+            'placeholder': '请输入发布地址（如：北京、上海、广东等）',
+            'class': 'form-control',
+            'id': 'article-publish-location'
         }
     )
     

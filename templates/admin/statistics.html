@@ -137,6 +137,16 @@
 
 {% block content %}
 <div class="container-fluid">
+    <!-- 页面标题和返回按钮 -->
+    <div class="d-flex align-items-center mb-4">
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary me-3" title="返回管理主界面">
+            <i class="fas fa-arrow-left me-1"></i>返回主界面
+        </a>
+        <h2 class="mb-0">
+            <i class="fas fa-chart-line me-2"></i>访问统计
+        </h2>
+    </div>
+    
     <!-- 总体统计卡片 -->
     <div class="row">
         <div class="col-lg-3 col-md-6">

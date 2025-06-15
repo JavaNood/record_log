@@ -13,18 +13,39 @@ from ..auth import (
     authenticate_admin, admin_logout, login_required, admin_required,
     get_current_admin, admin_login, get_session_info, change_admin_password
 )
-from ..models import Article, Tag, Config
+from ..models import Article, Tag, Config, Music
 from .. import db
 from ..utils import get_local_now
+
+
+def _parse_datetime_string(datetime_str):
+    """解析时间字符串并转换为本地时间"""
+    if not datetime_str or not datetime_str.strip():
+        return get_local_now()
+    
+    try:
+        from datetime import datetime
+        local_datetime = datetime.strptime(datetime_str.strip(), '%Y-%m-%d %H:%M:%S')
+        return local_datetime
+    except ValueError:
+        return get_local_now()
 
 
 # 允许的图片格式
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'}
 
+# 允许的音乐格式
+ALLOWED_MUSIC_EXTENSIONS = {'mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'}
+
 def allowed_image_file(filename):
     """检查是否是允许的图片格式"""
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
+
+def allowed_music_file(filename):
+    """检查是否是允许的音乐格式"""
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_MUSIC_EXTENSIONS
 
 
 @admin.route('/')
@@ -73,6 +94,77 @@ def upload_image():
         
     except Exception as e:
         return jsonify({'success': False, 'message': f'图片上传失败: {str(e)}'}), 500
+
+
+@admin.route('/upload-music', methods=['POST'])
+@login_required
+def upload_music():
+    """音乐文件上传API"""
+    try:
+        if 'music' not in request.files:
+            return jsonify({'success': False, 'message': '没有选择音乐文件'}), 400
+        
+        file = request.files['music']
+        if file.filename == '':
+            return jsonify({'success': False, 'message': '没有选择音乐文件'}), 400
+        
+        if not allowed_music_file(file.filename):
+            return jsonify({'success': False, 'message': '不支持的音乐格式，请上传 MP3、WAV、OGG、M4A、AAC 或 FLAC 格式的音乐文件'}), 400
+        
+        # 检查文件大小（20MB限制）
+        file.seek(0, 2)  # 移动到文件末尾
+        file_size = file.tell()
+        file.seek(0)  # 重置到文件开头
+        
+        max_size = 20 * 1024 * 1024  # 20MB
+        if file_size > max_size:
+            return jsonify({'success': False, 'message': f'文件大小超过限制（最大20MB），当前文件大小：{file_size / (1024 * 1024):.1f}MB'}), 400
+        
+        # 生成安全的文件名
+        filename = secure_filename(file.filename)
+        # 添加UUID前缀避免文件名冲突
+        unique_filename = f"{uuid.uuid4().hex}_{filename}"
+        
+        # 确保音乐上传目录存在
+        upload_dir = os.path.join('static', 'music')
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # 保存文件
+        file_path = os.path.join(upload_dir, unique_filename)
+        file.save(file_path)
+        
+        # 获取显示名称（从表单或使用原始文件名）
+        display_name = request.form.get('display_name', '').strip()
+        if not display_name:
+            # 如果没有提供显示名称，使用原始文件名（去掉扩展名）
+            display_name = os.path.splitext(file.filename)[0]
+        
+        # 获取MIME类型
+        mime_type = file.content_type or 'audio/mpeg'
+        
+        # 创建Music数据库记录
+        music = Music(
+            filename=filename,
+            display_name=display_name,
+            file_path=file_path,
+            file_size=file_size,
+            mime_type=mime_type,
+            duration=0  # 暂时设为0，后续可以添加音频时长检测
+        )
+        
+        db.session.add(music)
+        db.session.commit()
+        
+        # 返回成功响应
+        return jsonify({
+            'success': True,
+            'message': '音乐文件上传成功',
+            'music': music.to_dict()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'音乐上传失败: {str(e)}'}), 500
 
 
 @admin.route('/login', methods=['GET', 'POST'])
@@ -124,13 +216,42 @@ def dashboard():
 def articles():
     """文章列表管理页面"""
     page = request.args.get('page', 1, type=int)
+    sort_by = request.args.get('sort', 'updated_at')  # 默认按更新时间排序
+    order = request.args.get('order', 'desc')  # 默认降序
+    search_query = request.args.get('search', '').strip()  # 搜索关键词
     per_page = 10  # 每页显示10篇文章
     
-    # 获取所有文章，包括草稿和已发布的，优化：预加载标签关联
-    articles = Article.query.options(joinedload(Article.tags)).order_by(
-        Article.is_top.desc(),  # 置顶文章优先
-        Article.updated_at.desc()  # 按更新时间降序
-    ).paginate(
+    # 构建查询
+    query = Article.query.options(joinedload(Article.tags))
+    
+    # 应用搜索筛选
+    if search_query:
+        query = query.filter(Article.title.contains(search_query))
+    
+    # 应用排序
+    if sort_by == 'likes_count':
+        if order == 'asc':
+            query = query.order_by(Article.is_top.desc(), Article.likes_count.asc())
+        else:
+            query = query.order_by(Article.is_top.desc(), Article.likes_count.desc())
+    elif sort_by == 'view_count':
+        if order == 'asc':
+            query = query.order_by(Article.is_top.desc(), Article.view_count.asc())
+        else:
+            query = query.order_by(Article.is_top.desc(), Article.view_count.desc())
+    elif sort_by == 'created_at':
+        if order == 'asc':
+            query = query.order_by(Article.is_top.desc(), Article.created_at.asc())
+        else:
+            query = query.order_by(Article.is_top.desc(), Article.created_at.desc())
+    else:  # updated_at (默认)
+        if order == 'asc':
+            query = query.order_by(Article.is_top.desc(), Article.updated_at.asc())
+        else:
+            query = query.order_by(Article.is_top.desc(), Article.updated_at.desc())
+    
+    # 分页
+    articles = query.paginate(
         page=page,
         per_page=per_page,
         error_out=False
@@ -142,7 +263,10 @@ def articles():
     return render_template('admin/articles.html',
                          articles=articles,
                          current_admin=current_admin,
-                         session_info=session_info)
+                         session_info=session_info,
+                         sort_by=sort_by,
+                         order=order,
+                         search_query=search_query)
 
 
 @admin.route('/article/new', methods=['GET', 'POST'])
@@ -158,8 +282,8 @@ def new_article():
     if form.validate_on_submit():
         # 验证权限相关字段
         if form.permission.data == 'verify':
-            if not form.verify_question.data or not form.verify_answer.data:
-                flash('权限为需要验证时，验证提示词和答案为必填项', 'danger')
+            if not form.verify_question.data:
+                flash('权限为需要验证时，验证提示词为必填项', 'danger')
                 return render_template('admin/article_edit.html',
                                      form=form,
                                      article=None,
@@ -170,17 +294,22 @@ def new_article():
         
         # 处理表单提交
         try:
+            from ..utils import local_to_utc
             article = Article(
                 title=form.title.data.strip(),
                 content=form.content.data,
+                summary=form.summary.data.strip() if form.summary.data else None,
                 permission=form.permission.data,
                 verify_question=form.verify_question.data.strip() if form.verify_question.data else None,
                 verify_answer=form.verify_answer.data.strip() if form.verify_answer.data else None,
                 status=form.status.data,
                 is_top=form.is_top.data,
+                allow_comments=form.allow_comments.data,
+                publish_location=form.publish_location.data.strip() if form.publish_location.data else None,
                 view_count=form.view_count.data or 0,
-                created_at=get_local_now(),
-                updated_at=get_local_now()
+                likes_count=form.likes_count.data or 0,
+                created_at=_parse_datetime_string(form.created_at.data) if form.created_at.data and form.created_at.data.strip() else get_local_now(),
+                updated_at=_parse_datetime_string(form.updated_at.data) if form.updated_at.data and form.updated_at.data.strip() else get_local_now()
             )
             
             # 处理标签关联
@@ -227,8 +356,8 @@ def edit_article(article_id):
     if form.validate_on_submit():
         # 验证权限相关字段
         if form.permission.data == 'verify':
-            if not form.verify_question.data or not form.verify_answer.data:
-                flash('权限为需要验证时，验证提示词和答案为必填项', 'danger')
+            if not form.verify_question.data:
+                flash('权限为需要验证时，验证提示词为必填项', 'danger')
                 return render_template('admin/article_edit.html',
                                      form=form,
                                      article=article,
@@ -241,14 +370,42 @@ def edit_article(article_id):
         try:
             article.title = form.title.data.strip()
             article.content = form.content.data
+            article.summary = form.summary.data.strip() if form.summary.data else None
             article.permission = form.permission.data
             article.verify_question = form.verify_question.data.strip() if form.verify_question.data else None
             article.verify_answer = form.verify_answer.data.strip() if form.verify_answer.data else None
             article.status = form.status.data
             article.is_top = form.is_top.data
+            article.allow_comments = form.allow_comments.data
+            article.publish_location = form.publish_location.data.strip() if form.publish_location.data else None
             article.view_count = form.view_count.data or 0
-            article.updated_at = get_local_now()
+            article.likes_count = form.likes_count.data or 0
+              # 处理时间字段，转换为数据库存储格式
+            from datetime import datetime
             
+            # 处理创建时间
+            if form.created_at.data and form.created_at.data.strip():
+                try:
+                    local_datetime = datetime.strptime(form.created_at.data.strip(), '%Y-%m-%d %H:%M:%S')
+                    article.created_at = local_datetime
+                except ValueError:
+                    pass  # 格式错误时保持原值
+            
+            # 处理更新时间 - 编辑文章时始终更新，除非用户手动指定了时间
+            # 检查用户是否手动修改了时间字段
+            original_time_str = article.updated_at.strftime('%Y-%m-%d %H:%M:%S') if article.updated_at else ''
+            user_time_str = form.updated_at.data.strip() if form.updated_at.data else ''
+            
+            if user_time_str and user_time_str != original_time_str:
+                # 用户手动修改了时间，使用用户指定的时间
+                try:
+                    local_datetime = datetime.strptime(user_time_str, '%Y-%m-%d %H:%M:%S')
+                    article.updated_at = local_datetime
+                except ValueError:
+                    article.updated_at = get_local_now()  # 格式错误时使用当前时间
+            else:
+                # 用户没有修改时间，使用当前时间（编辑文章时更新）
+                article.updated_at = get_local_now()
             # 处理标签关联
             selected_tag_ids = form.tags.data
             if selected_tag_ids:
@@ -274,12 +431,21 @@ def edit_article(article_id):
         # 填充表单数据
         form.title.data = article.title
         form.content.data = article.content
+        form.summary.data = article.summary
         form.permission.data = article.permission
         form.verify_question.data = article.verify_question
         form.verify_answer.data = article.verify_answer
         form.status.data = article.status
         form.is_top.data = article.is_top
+        form.allow_comments.data = article.allow_comments
+        form.publish_location.data = article.publish_location
         form.view_count.data = article.view_count
+        form.likes_count.data = article.likes_count
+        # 格式化时间为本地时间字符串
+        if article.created_at:
+            form.created_at.data = article.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        if article.updated_at:
+            form.updated_at.data = article.updated_at.strftime('%Y-%m-%d %H:%M:%S')
         # 设置已选择的标签
         form.tags.data = [tag.id for tag in article.tags]
     
@@ -826,13 +992,37 @@ PRESET_BACKGROUNDS = {
         'name': '春日暖阳',
         'gradient': 'linear-gradient(135deg, #a8e6cf 0%, #dcedc1 50%, #ffd3a5 100%)',
         'description': '温暖的春日阳光背景'
+    },
+    'reading': {
+        'name': '阅读舒适',
+        'gradient': 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 25%, #90caf9 50%, #e1f5fe 75%, #f0f8ff 100%)',
+        'description': '适合阅读的淡蓝色背景，与文章详情页一致'
+    },
+    # 新增动态背景选项
+    'rain_animated': {
+        'name': '🌧️ 下雨动态',
+        'gradient': 'linear-gradient(to bottom, #0c1445 0%, #1f2951 25%, #3a4d6b 50%, #5a6b7f 75%, #758a9b 100%)',
+        'description': '动态下雨效果，包含雨滴和闪电',
+        'animation': 'rain'
+    },
+    'ocean_animated': {
+        'name': '🌊 海洋动态',
+        'gradient': 'linear-gradient(to bottom, #87CEEB 0%, #4682B4 30%, #1e3c72 60%, #2a5298 100%)',
+        'description': '动态海洋效果，包含波浪和气泡',
+        'animation': 'ocean'
+    },
+    'snow_animated': {
+        'name': '❄️ 下雪动态',
+        'gradient': 'linear-gradient(to bottom, #e6f3ff 0%, #b3d9ff 50%, #cce6ff 100%)',
+        'description': '动态下雪效果，飘落的雪花',
+        'animation': 'snow'
     }
 }
 
 # 时间段对应的背景
 TIME_BASED_BACKGROUNDS = {
     'morning': 'spring',    # 6-11点：春日暖阳
-    'noon': 'sky',          # 11-15点：蓝天白云
+    'noon': 'reading',      # 11-15点：阅读舒适（原蓝天白云）
     'afternoon': 'ocean',   # 15-18点：深海蓝调
     'evening': 'sunset',    # 18-22点：黄昏夕阳
     'night': 'night'        # 22-6点：星空夜晚
@@ -1003,6 +1193,469 @@ def reset_background():
 # def password_help():
 #     """密码找回帮助页面"""
 #     return render_template('admin/password_help.html')
+
+
+@admin.route('/comments')
+@login_required
+def comments():
+    """评论管理页面"""
+    page = request.args.get('page', 1, type=int)
+    status_filter = request.args.get('status', 'all')  # 状态筛选
+    article_id = request.args.get('article', type=int)  # 文章筛选
+    search_query = request.args.get('search', '').strip()  # 搜索
+    per_page = 20  # 每页显示20条评论
+    
+    # 导入评论模型
+    from ..models import Comment
+    
+    # 构建基础查询
+    query = Comment.query.options(db.joinedload(Comment.article))
+    
+    # 应用状态筛选
+    if status_filter != 'all':
+        query = query.filter(Comment.status == status_filter)
+    
+    # 应用文章筛选
+    if article_id:
+        query = query.filter(Comment.article_id == article_id)
+    
+    # 应用搜索筛选
+    if search_query:
+        query = query.filter(
+            db.or_(
+                Comment.content.contains(search_query),
+                Comment.nickname.contains(search_query)
+            )
+        )
+    
+    # 按创建时间倒序排列
+    comments = query.order_by(Comment.created_at.desc()).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+    
+    # 获取统计信息
+    stats = {
+        'total': Comment.query.count(),
+        'pending': Comment.query.filter_by(status='pending').count(),
+        'approved': Comment.query.filter_by(status='approved').count(),
+        'rejected': Comment.query.filter_by(status='rejected').count()
+    }
+    
+    # 获取文章列表（用于筛选）
+    articles_with_comments = db.session.query(Article.id, Article.title, db.func.count(Comment.id).label('comment_count'))\
+        .outerjoin(Comment)\
+        .group_by(Article.id, Article.title)\
+        .having(db.func.count(Comment.id) > 0)\
+        .order_by(Article.title)\
+        .limit(50).all()
+    
+    current_admin = get_current_admin()
+    session_info = get_session_info()
+    
+    return render_template('admin/comments.html',
+                         comments=comments,
+                         stats=stats,
+                         status_filter=status_filter,
+                         article_id=article_id,
+                         search_query=search_query,
+                         articles_with_comments=articles_with_comments,
+                         current_admin=current_admin,
+                         session_info=session_info)
+
+
+@admin.route('/comment/approve/<int:comment_id>', methods=['POST'])
+@login_required
+def approve_comment(comment_id):
+    """审核通过评论"""
+    try:
+        from ..models import Comment
+        comment = Comment.query.get_or_404(comment_id)
+        
+        comment.status = 'approved'
+        
+        # 更新文章评论数（只计算已通过的评论）
+        approved_count = Comment.query.filter_by(
+            article_id=comment.article_id,
+            status='approved'
+        ).count()
+        comment.article.comments_count = approved_count
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'评论已审核通过',
+            'new_status': 'approved'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'操作失败: {str(e)}'})
+
+
+@admin.route('/comment/reject/<int:comment_id>', methods=['POST'])
+@login_required
+def reject_comment(comment_id):
+    """拒绝评论"""
+    try:
+        from ..models import Comment
+        comment = Comment.query.get_or_404(comment_id)
+        
+        old_status = comment.status
+        comment.status = 'rejected'
+        
+        # 如果之前是已通过状态，需要更新文章评论数
+        if old_status == 'approved':
+            approved_count = Comment.query.filter_by(
+                article_id=comment.article_id,
+                status='approved'
+            ).count()
+            comment.article.comments_count = approved_count - 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'评论已拒绝',
+            'new_status': 'rejected'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'操作失败: {str(e)}'})
+
+
+@admin.route('/comment/delete/<int:comment_id>', methods=['POST'])
+@login_required
+def delete_comment(comment_id):
+    """删除评论"""
+    try:
+        from ..models import Comment
+        comment = Comment.query.get_or_404(comment_id)
+        
+        # 如果是已通过的评论，需要更新文章评论数
+        if comment.status == 'approved':
+            comment.article.comments_count = max(0, comment.article.comments_count - 1)
+        
+        db.session.delete(comment)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': '评论已删除'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'删除失败: {str(e)}'})
+
+
+@admin.route('/comment/reply', methods=['POST'])
+@login_required
+def admin_reply_comment():
+    """管理员回复评论"""
+    try:
+        data = request.get_json()
+        parent_id = data.get('parentId')
+        content = data.get('content', '').strip()
+        is_private = data.get('isPrivate', False)
+        
+        # 验证参数
+        if not parent_id or not content:
+            return jsonify({'success': False, 'message': '参数不完整'})
+        
+        if len(content) < 2:
+            return jsonify({'success': False, 'message': '回复内容至少需要2个字符'})
+        
+        if len(content) > 1000:
+            return jsonify({'success': False, 'message': '回复内容不能超过1000个字符'})
+        
+        # 获取父评论
+        from ..models import Comment
+        parent_comment = Comment.query.filter_by(
+            id=parent_id,
+            status='approved'  # 只能回复已审核通过的评论
+        ).first()
+        
+        if not parent_comment:
+            return jsonify({'success': False, 'message': '回复的评论不存在或未通过审核'})
+        
+        # 获取当前管理员信息
+        current_admin = get_current_admin()
+        admin_nickname = "作者"
+        
+        # 创建管理员回复
+        admin_reply = Comment(
+            content=content,
+            nickname=admin_nickname,
+            ip_address='127.0.0.1',  # 管理员回复使用本地IP
+            location='管理员',
+            is_private=is_private,
+            article_id=parent_comment.article_id,
+            parent_id=parent_id,
+            status='approved'  # 管理员回复直接审核通过
+        )
+        
+        db.session.add(admin_reply)
+        
+        # 更新文章评论数（管理员回复直接通过，计入评论数）
+        parent_comment.article.comments_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': '管理员回复发表成功！',
+            'reply': {
+                'id': admin_reply.id,
+                'content': admin_reply.content,
+                'display_name': admin_reply.display_name,
+                'status': admin_reply.status
+            }
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'回复失败: {str(e)}'})
+
+
+@admin.route('/comments/batch-action', methods=['POST'])
+@login_required
+def batch_comment_action():
+    """批量操作评论"""
+    try:
+        data = request.get_json()
+        comment_ids = data.get('comment_ids', [])
+        action = data.get('action')  # 'approve', 'reject', 'delete'
+        
+        if not comment_ids or not action:
+            return jsonify({'success': False, 'message': '参数错误'})
+        
+        from ..models import Comment
+        comments = Comment.query.filter(Comment.id.in_(comment_ids)).all()
+        
+        if not comments:
+            return jsonify({'success': False, 'message': '未找到要操作的评论'})
+        
+        success_count = 0
+        
+        for comment in comments:
+            try:
+                if action == 'approve':
+                    if comment.status != 'approved':
+                        comment.status = 'approved'
+                        # 更新文章评论数
+                        approved_count = Comment.query.filter_by(
+                            article_id=comment.article_id,
+                            status='approved'
+                        ).count()
+                        comment.article.comments_count = approved_count + 1
+                        success_count += 1
+                        
+                elif action == 'reject':
+                    old_status = comment.status
+                    comment.status = 'rejected'
+                    # 如果之前是已通过状态，需要更新文章评论数
+                    if old_status == 'approved':
+                        comment.article.comments_count = max(0, comment.article.comments_count - 1)
+                    success_count += 1
+                    
+                elif action == 'delete':
+                    # 如果是已通过的评论，需要更新文章评论数
+                    if comment.status == 'approved':
+                        comment.article.comments_count = max(0, comment.article.comments_count - 1)
+                    db.session.delete(comment)
+                    success_count += 1
+                    
+            except Exception as e:
+                continue  # 跳过失败的操作
+        
+        db.session.commit()
+        
+        action_names = {
+            'approve': '审核通过',
+            'reject': '拒绝',
+            'delete': '删除'
+        }
+        
+        return jsonify({
+            'success': True,
+            'message': f'成功{action_names.get(action, "处理")} {success_count} 条评论',
+            'processed_count': success_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'批量操作失败: {str(e)}'})
+
+
+@admin.route('/api/get_location')
+@login_required
+def get_admin_location():
+    """获取管理员当前的地理位置信息"""
+    try:
+        # 获取管理员IP地址
+        ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+        if ip_address and ',' in ip_address:
+            ip_address = ip_address.split(',')[0].strip()
+        
+        # 获取地理位置信息
+        from ..utils import get_ip_location
+        location = get_ip_location(ip_address)
+        
+        return jsonify({
+            'success': True,
+            'location': location,
+            'ip': ip_address
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'location': '未知地区',
+            'message': f'获取位置信息失败: {str(e)}'
+        })
+
+
+@admin.route('/music')
+@login_required
+def music():
+    """音乐管理页面"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # 每页显示10个音乐文件
+    
+    # 获取所有音乐文件，按上传时间倒序
+    music_files = Music.query.order_by(Music.created_at.desc()).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+    
+    # 获取音乐相关配置
+    music_enabled = Config.get_value('music_enabled', 'True') == 'True'
+    music_auto_play = Config.get_value('music_auto_play', 'False') == 'True'
+    music_default_volume = float(Config.get_value('music_default_volume', '0.5'))
+    
+    current_admin = get_current_admin()
+    session_info = get_session_info()
+    
+    return render_template('admin/music.html',
+                         music_files=music_files,
+                         music_enabled=music_enabled,
+                         music_auto_play=music_auto_play,
+                         music_default_volume=music_default_volume,
+                         current_admin=current_admin,
+                         session_info=session_info)
+
+
+@admin.route('/music/delete/<int:music_id>', methods=['POST'])
+@login_required
+def delete_music(music_id):
+    """删除音乐文件"""
+    try:
+        music = Music.query.get_or_404(music_id)
+        
+        # 删除文件
+        if music.file_path and os.path.exists(music.file_path):
+            try:
+                os.remove(music.file_path)
+            except Exception as e:
+                print(f"删除文件失败: {str(e)}")
+        
+        # 删除数据库记录
+        display_name = music.display_name
+        db.session.delete(music)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'音乐《{display_name}》已删除'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'删除失败: {str(e)}'
+        }), 500
+
+
+@admin.route('/music/edit/<int:music_id>', methods=['POST'])
+@login_required
+def edit_music(music_id):
+    """编辑音乐显示名称"""
+    try:
+        music = Music.query.get_or_404(music_id)
+        
+        display_name = request.form.get('display_name', '').strip()
+        if not display_name:
+            return jsonify({'success': False, 'message': '显示名称不能为空'})
+        
+        music.display_name = display_name
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'音乐名称已更新为《{display_name}》',
+            'music': music.to_dict()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'更新失败: {str(e)}'})
+
+
+@admin.route('/music/toggle/<int:music_id>', methods=['POST'])
+@login_required
+def toggle_music_enabled(music_id):
+    """切换音乐启用状态"""
+    try:
+        music = Music.query.get_or_404(music_id)
+        
+        enabled = request.json.get('enabled', False)
+        music.is_enabled = enabled
+        db.session.commit()
+        
+        status_text = '已添加到前端播放列表' if enabled else '已从前端播放列表移除'
+        
+        return jsonify({
+            'success': True,
+            'message': f'音乐《{music.display_name}》{status_text}',
+            'enabled': enabled
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'操作失败: {str(e)}'})
+
+
+@admin.route('/music/settings', methods=['POST'])
+@login_required
+def music_settings():
+    """更新音乐设置"""
+    try:
+        enabled = request.form.get('enabled') == 'on'
+        auto_play = request.form.get('auto_play') == 'on'
+        default_volume = float(request.form.get('default_volume', 0.5))
+        
+        # 验证音量范围
+        if not 0 <= default_volume <= 1:
+            flash('音量值必须在0-1之间', 'danger')
+            return redirect(url_for('admin.music'))
+        
+        # 保存设置
+        Config.set_value('music_enabled', str(enabled))
+        Config.set_value('music_auto_play', str(auto_play))
+        Config.set_value('music_default_volume', str(default_volume))
+        
+        flash('音乐设置已保存', 'success')
+        return redirect(url_for('admin.music'))
+        
+    except Exception as e:
+        flash(f'保存设置失败: {str(e)}', 'danger')
+        return redirect(url_for('admin.music'))
 
 
 @admin.route('/password-change', methods=['GET', 'POST'])

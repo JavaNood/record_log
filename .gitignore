@@ -41,6 +41,7 @@ db.sqlite3-journal
 config_secret.py
 config_dev.py
 secrets.py
+production_config.py
 deploy/gunicorn.conf.py 
 deploy/nginx.conf
 
@@ -54,9 +55,11 @@ deploy/nginx.conf
 # Upload directories with sensitive content
 static/images/*
 static/uploads/*
+static/music/*
 uploads/*
 !static/images/uploads/.gitkeep
 !static/uploads/.gitkeep
+!static/music/.gitkeep
 
 # Logs
 logs/*.log
@@ -98,10 +101,48 @@ check_db.py
 static/images/backgrounds/*
 !static/images/backgrounds/.gitkeep 
 
-##create devolopment files 
+# Development documentation files 
 architecture.md
 task.md
 production.md
 
-## deploy files
+# Deploy files and production scripts
 /deploy/*
+pack_for_production.bat
+
+# Instance data and user-generated content
+instance/
+
+# Development database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Log files from the application
+logs/
+*.log
+*.out
+*.pid
+
+# Temporary packaging directory (if exists)
+temp_pack/
+
+# Python cache directories
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Configuration with potential sensitive data
+config_local.py
+local_config.py
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+# Application-specific data files
+data/
+storage/
+wsgi.py

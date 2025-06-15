@@ -181,6 +181,81 @@
     box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
 }
 
+/* 动态背景特殊样式 */
+.preset-bg-option.animated {
+    position: relative;
+    overflow: hidden;
+}
+
+.preset-bg-option.animated::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%);
+    background-size: 20px 20px;
+    animation: animate-stripe 2s linear infinite;
+    z-index: 1;
+}
+
+.preset-bg-option.animated .preset-overlay {
+    z-index: 2;
+    position: relative;
+}
+
+@keyframes animate-stripe {
+    0% { background-position: 0 0; }
+    100% { background-position: 20px 20px; }
+}
+
+.preset-bg-option.animated.rain-preview::after {
+    content: '🌧️';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 1.5em;
+    z-index: 3;
+    animation: bounce 2s ease-in-out infinite;
+}
+
+.preset-bg-option.animated.ocean-preview::after {
+    content: '🌊';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 1.5em;
+    z-index: 3;
+    animation: wave-bounce 3s ease-in-out infinite;
+}
+
+.preset-bg-option.animated.snow-preview::after {
+    content: '❄️';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 1.5em;
+    z-index: 3;
+    animation: float 4s ease-in-out infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-5px); }
+}
+
+@keyframes wave-bounce {
+    0%, 100% { transform: translateX(0) rotate(0deg); }
+    50% { transform: translateX(5px) rotate(5deg); }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(180deg); }
+}
+
 .preset-preview {
     position: absolute;
     top: 0;
@@ -229,6 +304,16 @@
 {% endblock %}
 
 {% block content %}
+<!-- 页面标题和返回按钮 -->
+<div class="d-flex align-items-center mb-4">
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary me-3" title="返回管理主界面">
+        <i class="fas fa-arrow-left me-1"></i>返回主界面
+    </a>
+    <h2 class="mb-0">
+        <i class="fas fa-image me-2"></i>背景设置
+    </h2>
+</div>
+
 <div class="row">
     <!-- 预设背景选择区域 -->
     <div class="col-12 mb-4">
@@ -243,11 +328,16 @@
                     <div class="row">
                         {% for key, bg in preset_backgrounds.items() %}
                         <div class="col-md-4 mb-3">
-                            <div class="preset-bg-option" data-preset="{{ key }}">
+                            <div class="preset-bg-option {% if 'animated' in key %}animated {% if 'rain' in key %}rain-preview{% elif 'ocean' in key %}ocean-preview{% elif 'snow' in key %}snow-preview{% endif %}{% endif %}" data-preset="{{ key }}">
                                 <div class="preset-preview" style="background: {{ bg.gradient }};">
                                     <div class="preset-overlay">
                                         <h6 class="text-white">{{ bg.name }}</h6>
                                         <small class="text-white-50">{{ bg.description }}</small>
+                                        {% if 'animated' in key %}
+                                        <div class="mt-2">
+                                            <span class="badge bg-primary">动态效果</span>
+                                        </div>
+                                        {% endif %}
                                     </div>
                                     {% if current_preset == key and background_type == 'preset' %}
                                     <div class="preset-active-indicator">

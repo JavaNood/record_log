@@ -33,6 +33,20 @@
             {% endif %}
         </div>
 
+        <!-- 前端展示内容 -->
+        <div class="mb-4">
+            {{ form.summary.label(class="form-label fw-bold") }}
+            {{ form.summary() }}
+            <div class="form-text">用于首页文章列表展示。如果不填写，公开文章将自动截取正文前2行内容，需要验证的文章将只显示验证提示。</div>
+            {% if form.summary.errors %}
+                <div class="text-danger small mt-1">
+                    {% for error in form.summary.errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
         <!-- Markdown编辑器区域 -->
         <div class="mb-4">
             {{ form.content.label(class="form-label fw-bold") }}
@@ -100,9 +114,9 @@
                         <button type="button" class="btn btn-outline-info" onclick="togglePreview()" id="previewToggle">
                             <i class="fas fa-eye"></i> 预览
                         </button>
-                        <button type="button" class="btn btn-outline-warning" onclick="testMarkdown()" title="插入测试内容">
+                        <!-- <button type="button" class="btn btn-outline-warning" onclick="testMarkdown()" title="插入测试内容">
                             <i class="fas fa-vial"></i> 测试
-                        </button>
+                        </button> -->
                     </div>
                 </div>
                 
@@ -155,13 +169,96 @@
                 {% endif %}
             </div>
 
-            <!-- 置顶设置 -->
+            <!-- 自定义点赞数 -->
+            <div class="col-md-3 mb-3">
+                {{ form.likes_count.label(class="form-label fw-bold") }}
+                {{ form.likes_count() }}
+                <div class="form-text">自定义文章点赞数</div>
+                {% if form.likes_count.errors %}
+                    <div class="text-danger small mt-1">
+                        {% for error in form.likes_count.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- 其他设置 -->
             <div class="col-md-3 mb-3">
                 <label class="form-label fw-bold d-block">其他设置</label>
-                <div class="form-check">
+                <div class="form-check mb-2">
                     {{ form.is_top() }}
                     {{ form.is_top.label(class="form-check-label") }}
                 </div>
+                <div class="form-check mb-3">
+                    {{ form.allow_comments() }}
+                    {{ form.allow_comments.label(class="form-check-label") }}
+                </div>
+                
+                <!-- 发布地址 -->
+                <div class="mb-3">
+                    {{ form.publish_location.label(class="form-label fw-bold") }}
+                    <div class="input-group">
+                        {{ form.publish_location() }}
+                        <button type="button" class="btn btn-outline-secondary" id="getLocationBtn" title="获取当前位置">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </button>
+                    </div>
+                    <div class="form-text">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i>
+                            点击 <i class="fas fa-map-marker-alt"></i> 按钮自动获取当前位置，或手动输入发布地址
+                        </small>
+                    </div>
+                    {% if form.publish_location.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in form.publish_location.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 时间设置区域 -->
+        <div class="row mb-4">
+            <div class="col-12 mb-3">
+                <h6 class="fw-bold text-secondary">
+                    <i class="fas fa-clock me-2"></i>时间设置
+                </h6>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    可以自定义文章的创建时间和更新时间。留空则使用系统默认时间。
+                </div>
+            </div>
+            
+            <!-- 创建时间 -->
+            <div class="col-md-6 mb-3">
+                {{ form.created_at.label(class="form-label fw-bold") }}
+                {{ form.created_at() }}
+                <div class="form-text">格式：2025-06-11 21:34:00，留空则使用当前时间</div>
+                {% if form.created_at.errors %}
+                    <div class="text-danger small mt-1">
+                        {% for error in form.created_at.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- 更新时间 -->
+            <div class="col-md-6 mb-3">
+                {{ form.updated_at.label(class="form-label fw-bold") }}
+                {{ form.updated_at() }}
+                <div class="form-text">格式：2025-06-11 21:34:00，留空则使用当前时间</div>
+                {% if form.updated_at.errors %}
+                    <div class="text-danger small mt-1">
+                        {% for error in form.updated_at.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </div>
         </div>
 
@@ -217,7 +314,8 @@
             </h6>
             <div class="alert alert-info mb-3">
                 <i class="fas fa-info-circle me-2"></i>
-                当文章权限设为"需要验证"时，用户需要回答正确的验证问题才能查看文章内容。
+                当文章权限设为"需要验证"时，用户需要回答正确的验证问题才能查看文章内容。<br>
+                <strong>提示：</strong>如果验证答案留空，表示用户再次点击验证按钮即可进入文章详情页。
             </div>
             
             <div class="row">
@@ -928,7 +1026,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // 检查验证字段
             if (permissionField && permissionField.value === 'verify') {
                 const questionField = document.getElementById('verify-question');
-                const answerField = document.getElementById('verify-answer');
                 
                 if (!questionField || !questionField.value.trim()) {
                     e.preventDefault();
@@ -939,14 +1036,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     return false;
                 }
                 
-                if (!answerField || !answerField.value.trim()) {
-                    e.preventDefault();
-                    showMessage('权限为需要验证时，验证答案为必填项', 'danger');
-                    // 确保验证区域显示
-                    toggleVerificationSection();
-                    if (answerField) answerField.focus();
-                    return false;
-                }
+                // 验证答案为空时，表示允许任意答案（用户再次点击验证即可进入）
+                // 不需要强制填写答案
             }
             
             const originalText = submitBtn.innerHTML;
@@ -1259,6 +1350,51 @@ function simpleMarkdownToHtml(markdown) {
     
     return html;
 }
+
+    // 获取当前位置功能
+    const getLocationBtn = document.getElementById('getLocationBtn');
+    const publishLocationField = document.getElementById('article-publish-location');
+    
+    if (getLocationBtn && publishLocationField) {
+        getLocationBtn.addEventListener('click', function() {
+            const originalText = this.innerHTML;
+            const originalDisabled = this.disabled;
+            
+            // 显示加载状态
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            this.disabled = true;
+            
+            // 调用后端API获取位置
+            fetch('/api/get_location')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.location) {
+                        publishLocationField.value = data.location;
+                        showMessage(`位置获取成功：${data.location}`, 'success');
+                    } else {
+                        showMessage('位置获取失败，请手动输入', 'warning');
+                    }
+                })
+                .catch(error => {
+                    console.error('获取位置失败:', error);
+                    showMessage('网络错误，无法获取位置信息', 'danger');
+                })
+                .finally(() => {
+                    // 恢复按钮状态
+                    this.innerHTML = originalText;
+                    this.disabled = originalDisabled;
+                });
+        });
+        
+        // 对于新建文章，自动获取位置作为默认值
+        if (!publishLocationField.value || publishLocationField.value.trim() === '') {
+            setTimeout(() => {
+                getLocationBtn.click();
+            }, 1000); // 延迟1秒自动获取
+        }
+    }
+
+    // 页面加载完成
 
 console.log('JavaScript脚本加载完成');
 </script>

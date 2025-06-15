@@ -304,6 +304,38 @@
     color: white;
 }
 
+/* 左上角返回按钮 */
+.back-nav {
+    position: fixed;
+    left: 20px;
+    top: 20px;
+    z-index: 100;
+}
+
+.back-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.95);
+    color: #333;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 25px;
+    text-decoration: none;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    font-size: 0.9rem;
+}
+
+.back-nav-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    color: #007bff;
+    text-decoration: none;
+    border-color: rgba(0, 123, 255, 0.3);
+}
+
 /* 响应式设计 */
 @media (max-width: 1200px) {
     .article-container {
@@ -369,6 +401,17 @@
         border-radius: 25px;
     }
     
+    .back-nav {
+        position: static;
+        margin-bottom: 1rem;
+    }
+    
+    .back-nav-btn {
+        position: relative;
+        display: inline-flex;
+        margin-left: 1rem;
+    }
+    
     .toc-sidebar {
         padding: 1rem;
         max-height: 250px;
@@ -389,13 +432,252 @@
         gap: 1rem;
     }
 }
+
+/* 点赞按钮样式 */
+.like-section {
+    margin-top: 1.5rem;
+    text-align: center;
+}
+
+.like-btn {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 15px rgba(238, 90, 111, 0.3);
+}
+
+.like-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(238, 90, 111, 0.4);
+}
+
+.like-btn.liked {
+    background: linear-gradient(135deg, #48cae4, #0077b6);
+    box-shadow: 0 4px 15px rgba(0, 119, 182, 0.3);
+}
+
+.like-btn.liked:hover {
+    box-shadow: 0 6px 20px rgba(0, 119, 182, 0.4);
+}
+
+.like-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.like-btn i {
+    font-size: 1.1rem;
+}
+
+.like-btn .like-count {
+    font-weight: 600;
+}
+
+/* 评论区域样式 */
+.comments-section {
+    margin-top: 3rem;
+    padding: 2rem 0;
+    border-top: 2px solid #dee2e6;
+}
+
+.comments-header h4 {
+    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.comments-count {
+    color: #6c757d;
+    font-weight: normal;
+    font-size: 0.9em;
+}
+
+.comment-form-container {
+    background: rgba(248, 249, 250, 0.8);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.comment-form .form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.comment-form .form-control {
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+    transition: all 0.2s ease;
+}
+
+.comment-form .form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
+}
+
+.comment-form textarea.form-control {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.form-check-input:checked {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.form-check-label {
+    color: #495057;
+    cursor: pointer;
+}
+
+.comments-list {
+    margin-top: 2rem;
+}
+
+.comments-placeholder {
+    background: rgba(248, 249, 250, 0.5);
+    border-radius: 12px;
+    margin: 1rem 0;
+}
+
+.comments-disabled {
+    margin-top: 2rem;
+    padding: 1rem 0;
+    border-top: 1px solid #dee2e6;
+}
+
+/* 评论列表样式 */
+.comment-item {
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    background: rgba(255, 255, 255, 0.9);
+    transition: all 0.2s ease;
+}
+
+.comment-item:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.comment-author {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.comment-author-name {
+    font-weight: 600;
+    color: #495057;
+}
+
+.comment-location {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.comment-time {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.comment-content {
+    color: #333;
+    line-height: 1.6;
+    margin-bottom: 0.75rem;
+    white-space: pre-wrap;
+}
+
+.comment-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.comment-reply-btn {
+    background: none;
+    border: none;
+    color: #007bff;
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.comment-reply-btn:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+    color: #0056b3;
+}
+
+.comments-empty {
+    text-align: center;
+    padding: 3rem 0;
+    color: #6c757d;
+}
+
+.comments-empty i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .comment-form-container {
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .comments-section {
+        margin-top: 2rem;
+        padding: 1.5rem 0;
+    }
+    
+    .comment-item {
+        padding: 1rem;
+    }
+    
+    .comment-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- 返回首页按钮 -->
+<!-- 左上角返回按钮 -->
+<div class="back-nav">
+    <a href="{{ return_url }}" class="back-nav-btn" title="返回">
+        <i class="fas fa-arrow-left"></i>
+        <span>返回</span>
+    </a>
+</div>
+
+<!-- 右侧返回首页按钮 -->
 <div class="back-home">
-    <a href="{{ url_for('frontend.index') }}" class="back-home-btn" title="返回首页">
+    <a href="{{ return_url }}" class="back-home-btn" title="返回首页">
         <i class="fas fa-home"></i>
         <span class="d-none d-md-inline ms-2">返回首页</span>
     </a>
@@ -412,6 +694,12 @@
             </div>
             <div class="toc-content">
                 {{ article_toc | safe }}
+                <!-- 添加评论区快速跳转 -->
+                <ul>
+                    <li><a href="#comments-section" class="toc-comment-link">
+                        <i class="fas fa-comments"></i> 评论区
+                    </a></li>
+                </ul>
             </div>
         </aside>
         {% endif %}
@@ -430,6 +718,13 @@
                             <span>{{ article.created_at.strftime('%Y年%m月%d日') }}</span>
                         </div>
                         
+                        {% if article.publish_location %}
+                        <div class="article-meta-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>{{ article.publish_location }}</span>
+                        </div>
+                        {% endif %}
+                        
                         {% if article.updated_at and article.updated_at != article.created_at %}
                         <div class="article-meta-item">
                             <i class="fas fa-edit"></i>
@@ -440,6 +735,11 @@
                         <div class="article-meta-item">
                             <i class="fas fa-eye"></i>
                             <span>{{ article.view_count }} 次浏览</span>
+                        </div>
+                        
+                        <div class="article-meta-item">
+                            <i class="fas fa-heart"></i>
+                            <span>{{ article.likes_count }} 次点赞</span>
                         </div>
                         
                         {% if article.author %}
@@ -490,6 +790,120 @@
                     {% endif %}
                 </div>
                 
+                <!-- 点赞功能 -->
+                <div class="like-section">
+                    {% if article.id|is_liked %}
+                    <button class="like-btn liked" id="likeBtn" data-article-id="{{ article.id }}" disabled>
+                        <i class="fas fa-heart"></i>
+                        <span class="like-count">{{ article.likes_count }}</span>
+                        <span>已点赞</span>
+                    </button>
+                    {% else %}
+                    <button class="like-btn" id="likeBtn" data-article-id="{{ article.id }}">
+                        <i class="far fa-heart"></i>
+                        <span class="like-count">{{ article.likes_count }}</span>
+                        <span>点赞</span>
+                    </button>
+                    {% endif %}
+                </div>
+                
+                <!-- 评论区域 -->
+                {% if (article.allow_comments is defined and article.allow_comments) or (article.allow_comments is not defined) %}
+                <div class="comments-section" id="comments-section">
+                    <div class="comments-header">
+                        <h4>
+                            <i class="fas fa-comments"></i>
+                            评论 <span class="comments-count" id="commentsCount">({{ article.comments_count if article.comments_count is defined else 0 }})</span>
+                        </h4>
+                        <p class="text-muted small">
+                            <i class="fas fa-info-circle"></i>
+                            评论需要管理员审核后才能显示，请文明发言
+                        </p>
+                    </div>
+                    
+                    <!-- 评论表单 -->
+                    <div class="comment-form-container">
+                        <form id="commentForm" class="comment-form">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="nickname" class="form-label">昵称</label>
+                                    <input type="text" class="form-control" id="nickname" name="nickname" 
+                                           placeholder="请输入昵称（留空将显示为访客）" maxlength="50">
+                                    <div class="form-text">
+                                        <small>留空将显示为"访客_序号"</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">状态</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="isPrivate" name="isPrivate">
+                                        <label class="form-check-label" for="isPrivate">
+                                            <i class="fas fa-eye-slash"></i>
+                                            仅作者可见
+                                        </label>
+                                    </div>
+                                    <div class="form-text">
+                                        <small>仅作者可见的评论将不会被回复，建议留下联系方式</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="content" class="form-label">评论内容 <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="content" name="content" rows="4" 
+                                          placeholder="请输入您的评论内容..." required maxlength="1000"></textarea>
+                                <div class="invalid-feedback">
+                                    请输入评论内容
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <div class="form-text">
+                                        <small>支持换行，请文明发言</small>
+                                    </div>
+                                    <div class="form-text">
+                                        <small id="charCount">0/1000 字符</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="form-text text-muted small">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span id="locationInfo">正在获取位置信息...</span>
+                                </div>
+                                <button type="submit" class="btn btn-primary" id="submitCommentBtn">
+                                    <i class="fas fa-paper-plane"></i>
+                                    发表评论
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- 评论列表 -->
+                    <div class="comments-list" id="commentsList">
+                        <div class="comments-loading text-center py-4">
+                            <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                            <p class="text-muted mt-2">加载评论中...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 分页控件 -->
+                    <div id="commentsPagination" class="comments-pagination d-none mt-4">
+                        <nav aria-label="评论分页">
+                            <ul class="pagination justify-content-center">
+                                <!-- 分页按钮将通过JavaScript动态生成 -->
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+                {% else %}
+                <div class="comments-disabled">
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-comment-slash fa-2x mb-2"></i>
+                        <p>该文章已关闭评论功能</p>
+                    </div>
+                </div>
+                {% endif %}
+                
                 <!-- 文章底部信息 -->
                 <div class="text-center mt-5 pt-4 border-top">
                     <p class="text-muted small">
@@ -498,7 +912,7 @@
                     </p>
                     
                     <div class="mt-3">
-                        <a href="{{ url_for('frontend.index') }}" class="btn btn-outline-primary">
+                        <a href="{{ return_url }}" class="btn btn-outline-primary">
                             <i class="fas fa-home"></i> 返回首页
                         </a>
                     </div>
@@ -692,6 +1106,190 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    // 获取用户地理位置信息
+    function getUserLocation() {
+        const locationElement = document.getElementById('locationInfo');
+        if (locationElement) {
+            // 调用后端API获取地理位置
+            fetch('/api/get_location')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.location) {
+                        locationElement.innerHTML = `您的位置: <span class="text-primary">${data.location}</span>`;
+                    } else {
+                        locationElement.textContent = '位置: 未知地区';
+                    }
+                })
+                .catch(error => {
+                    console.log('获取位置信息失败:', error);
+                    locationElement.textContent = '位置: 未知地区';
+                });
+        }
+    }
+    
+    // 评论表单验证和处理
+    const commentForm = document.getElementById('commentForm');
+    if (commentForm) {
+        // 获取用户地理位置
+        getUserLocation();
+        
+        // 表单提交处理
+        commentForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitCommentBtn');
+            const contentField = document.getElementById('content');
+            const nicknameField = document.getElementById('nickname');
+            const isPrivateField = document.getElementById('isPrivate');
+            
+            // 验证表单
+            if (!validateCommentForm()) {
+                return;
+            }
+            
+            // 禁用提交按钮
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 发表中...';
+            
+            // 构建提交数据
+            const commentData = {
+                content: contentField.value.trim(),
+                nickname: nicknameField.value.trim(),
+                isPrivate: isPrivateField.checked
+            };
+            
+            // 调用评论发表API
+            fetch(`/add_comment/{{ article.id }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(commentData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 重置表单
+                    contentField.value = '';
+                    nicknameField.value = '';
+                    isPrivateField.checked = false;
+                    
+                    // 移除验证状态
+                    contentField.classList.remove('is-valid', 'is-invalid');
+                    
+                    // 重置字符计数
+                    const charCountEl = document.getElementById('charCount');
+                    if (charCountEl) {
+                        charCountEl.textContent = '0/1000 字符';
+                        charCountEl.style.color = '#6c757d';
+                    }
+                    
+                    // 显示成功消息
+                showMessage(data.message, 'success');
+                
+                // 刷新评论列表并滚动到评论区域（回到第一页显示新评论）
+                setTimeout(() => {
+                    loadComments(1);
+                    setTimeout(() => scrollToComments(), 200);
+                }, 1000);
+                    
+                } else {
+                    // 显示错误消息
+                    showMessage(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage('网络错误，请稍后重试', 'error');
+            })
+            .finally(() => {
+                // 恢复按钮状态
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 发表评论';
+            });
+        });
+        
+        // 实时验证和字符计数
+        const contentField = document.getElementById('content');
+        const charCountEl = document.getElementById('charCount');
+        
+        if (contentField) {
+            // 更新字符计数
+            function updateCharCount() {
+                const length = contentField.value.length;
+                charCountEl.textContent = `${length}/1000 字符`;
+                
+                // 根据字符数量改变颜色
+                if (length > 900) {
+                    charCountEl.style.color = '#dc3545'; // 红色警告
+                } else if (length > 700) {
+                    charCountEl.style.color = '#ffc107'; // 黄色提醒
+                } else {
+                    charCountEl.style.color = '#6c757d'; // 默认灰色
+                }
+            }
+            
+            contentField.addEventListener('input', function() {
+                // 移除之前的错误状态
+                this.classList.remove('is-invalid');
+                // 更新字符计数
+                updateCharCount();
+            });
+            
+            contentField.addEventListener('blur', function() {
+                validateCommentContent(this);
+            });
+            
+            // 初始化字符计数
+            updateCharCount();
+        }
+    }
+    
+    // 验证评论表单
+    function validateCommentForm() {
+        const contentField = document.getElementById('content');
+        let isValid = true;
+        
+        // 验证评论内容
+        if (!validateCommentContent(contentField)) {
+            isValid = false;
+        }
+        
+        return isValid;
+    }
+    
+    // 验证评论内容
+    function validateCommentContent(field) {
+        const content = field.value.trim();
+        
+        if (!content) {
+            field.classList.add('is-invalid');
+            return false;
+        }
+        
+        if (content.length < 2) {
+            field.classList.add('is-invalid');
+            const feedback = field.nextElementSibling;
+            if (feedback && feedback.classList.contains('invalid-feedback')) {
+                feedback.textContent = '评论内容至少需要2个字符';
+            }
+            return false;
+        }
+        
+        if (content.length > 1000) {
+            field.classList.add('is-invalid');
+            const feedback = field.nextElementSibling;
+            if (feedback && feedback.classList.contains('invalid-feedback')) {
+                feedback.textContent = '评论内容不能超过1000个字符';
+            }
+            return false;
+        }
+        
+        field.classList.remove('is-invalid');
+        field.classList.add('is-valid');
+        return true;
+    }
+
     // 响应式目录处理
     function handleResponsiveToc() {
         const tocSidebar = document.querySelector('.toc-sidebar');
@@ -718,6 +1316,597 @@ document.addEventListener('DOMContentLoaded', function() {
     // 监听窗口大小变化
     window.addEventListener('resize', handleResponsiveToc);
     handleResponsiveToc(); // 初始化
+    
+    // 点赞功能
+    const likeBtn = document.getElementById('likeBtn');
+    if (likeBtn) {
+        likeBtn.addEventListener('click', function() {
+            const articleId = this.getAttribute('data-article-id');
+            
+            // 禁用按钮防止重复点击
+            this.disabled = true;
+            
+            // 发送点赞请求
+            fetch(`/like_article/${articleId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 更新按钮状态为已点赞
+                    this.classList.add('liked');
+                    this.innerHTML = `
+                        <i class="fas fa-heart"></i>
+                        <span class="like-count">${data.likes_count}</span>
+                        <span>已点赞</span>
+                    `;
+                    
+                    // 更新页面顶部的点赞数显示
+                    const metaLikeCount = document.querySelector('.article-meta .article-meta-item i.fa-heart').parentElement.querySelector('span');
+                    if (metaLikeCount) {
+                        metaLikeCount.textContent = `${data.likes_count} 次点赞`;
+                    }
+                    
+                    // 显示成功提示
+                    showMessage('点赞成功！感谢您的支持 ❤️', 'success');
+                } else {
+                    // 显示错误信息
+                    showMessage(data.message || '点赞失败，请重试', 'error');
+                    // 重新启用按钮
+                    this.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('点赞请求失败:', error);
+                showMessage('网络错误，请重试', 'error');
+                // 重新启用按钮
+                this.disabled = false;
+            });
+        });
+    }
+    
+    // 当前页码，用于分页
+    let currentCommentsPage = 1;
+    
+    // 加载评论列表（移到前面避免调用顺序问题）
+    function loadComments(page = 1) {
+        const commentsList = document.getElementById('commentsList');
+        const commentsCount = document.getElementById('commentsCount');
+        const commentsPagination = document.getElementById('commentsPagination');
+        
+        if (!commentsList) return;
+        
+        currentCommentsPage = page;
+        
+        // 显示加载状态
+        commentsList.innerHTML = `
+            <div class="comments-loading text-center py-4">
+                <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                <p class="text-muted mt-2">加载评论中...</p>
+            </div>
+        `;
+        
+        // 隐藏分页
+        if (commentsPagination) {
+            commentsPagination.classList.add('d-none');
+        }
+        
+        // 调用API获取评论
+        fetch(`/api/comments/{{ article.id }}?page=${page}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    renderComments(data.comments);
+                    renderPagination(data.pagination);
+                    
+                    // 更新评论数量显示
+                    if (commentsCount && data.stats) {
+                        commentsCount.textContent = `(${data.stats.total_comments})`;
+                    }
+                } else {
+                    console.warn('评论API返回错误:', data.message);
+                    commentsList.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            ${data.message || '加载评论失败'}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('加载评论失败:', error);
+                commentsList.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i>
+                        网络错误，无法加载评论<br>
+                        <small class="text-muted">错误详情: ${error.message}</small>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-primary" onclick="loadComments(${page}); setTimeout(() => scrollToComments(), 200);">
+                                <i class="fas fa-redo"></i> 重试加载
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+    }
+    
+    // 渲染评论列表
+    function renderComments(comments) {
+        const commentsList = document.getElementById('commentsList');
+        
+        if (comments.length === 0) {
+            commentsList.innerHTML = `
+                <div class="comments-empty">
+                    <i class="fas fa-comment-slash"></i>
+                    <p>暂无评论</p>
+                    <small>成为第一个评论的人吧！</small>
+                </div>
+            `;
+            return;
+        }
+        
+        // 新的数据结构已经包含了层级关系，直接渲染
+        let commentsHtml = '';
+        comments.forEach(comment => {
+            commentsHtml += renderCommentItem(comment, 0);
+        });
+        
+        commentsList.innerHTML = commentsHtml;
+        
+        // 绑定回复按钮事件和折叠事件
+        bindReplyEvents();
+        bindCollapseEvents();
+    }
+    
+    // 渲染单个评论项（支持层级）
+    function renderCommentItem(comment, level) {
+        const indent = level > 0 ? `style="margin-left: ${level * 30}px; border-left: 3px solid #e9ecef; padding-left: 15px;"` : '';
+        const replyClass = level > 0 ? 'comment-reply' : 'comment-root';
+        
+        // 检查是否是作者回复（之前的管理员现在改为作者）
+        const isAuthor = comment.display_name && comment.display_name === '作者';
+        const authorBadge = isAuthor ? '<span class="badge bg-danger ms-2"><i class="fas fa-crown"></i> 作者</span>' : '';
+        const authorDataAttr = isAuthor ? 'data-admin="true"' : '';
+        
+        // 检查是否有回复并计算折叠状态
+        const hasReplies = comment.replies && comment.replies.length > 0;
+        const repliesCollapsed = hasReplies; // 默认折叠
+        const collapseIcon = repliesCollapsed ? 'fa-chevron-down' : 'fa-chevron-up';
+        const collapseText = repliesCollapsed ? '展开' : '收起';
+        
+        let html = `
+            <div class="comment-item ${replyClass}" data-comment-id="${comment.id}" ${indent}>
+                <div class="comment-header">
+                    <div class="comment-author">
+                        <i class="fas fa-user-circle text-primary"></i>
+                        <span class="comment-author-name" ${authorDataAttr}>${escapeHtml(comment.display_name)}</span>
+                        ${authorBadge}
+                        ${comment.location_display ? `<span class="comment-location">${escapeHtml(comment.location_display)}</span>` : ''}
+                        ${level > 0 ? '<span class="comment-reply-badge"><i class="fas fa-reply"></i> 回复</span>' : ''}
+                    </div>
+                    <div class="comment-time">
+                        <i class="fas fa-clock"></i>
+                        ${comment.time_display}
+                    </div>
+                </div>
+                <div class="comment-content">${escapeHtml(comment.content)}</div>
+                <div class="comment-actions">
+                    <button class="comment-reply-btn" data-comment-id="${comment.id}" data-author-name="${escapeHtml(comment.display_name)}">
+                        <i class="fas fa-reply"></i> 回复
+                    </button>
+                    ${hasReplies ? `
+                    <button class="comment-collapse-btn" data-comment-id="${comment.id}" data-collapsed="${repliesCollapsed}">
+                        <i class="fas ${collapseIcon}"></i> ${collapseText} ${comment.replies.length} 条回复
+                    </button>
+                    ` : ''}
+                </div>
+                <div class="reply-form-container" id="replyForm-${comment.id}" style="display: none;"></div>
+        `;
+        
+        // 渲染回复区域
+        if (hasReplies) {
+            html += `<div class="comment-replies" id="replies-${comment.id}" style="display: ${repliesCollapsed ? 'none' : 'block'};">`;
+            comment.replies.forEach(reply => {
+                html += renderCommentItem(reply, level + 1);
+            });
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        
+        return html;
+    }
+    
+    // 滚动到评论区域
+    function scrollToComments() {
+        const commentsSection = document.getElementById('commentsList');
+        if (commentsSection) {
+            const rect = commentsSection.getBoundingClientRect();
+            const scrollTop = window.pageYOffset + rect.top - 100; // 预留100px空间
+            
+            window.scrollTo({
+                top: scrollTop,
+                behavior: 'smooth'
+            });
+        }
+    }
+    
+
+    
+    // 渲染分页控件
+    function renderPagination(pagination) {
+        const paginationContainer = document.getElementById('commentsPagination');
+        if (!paginationContainer || !pagination) return;
+        
+        if (pagination.total_pages <= 1) {
+            paginationContainer.classList.add('d-none');
+            return;
+        }
+        
+        const paginationUl = paginationContainer.querySelector('.pagination');
+        let paginationHtml = '';
+        
+        // 上一页按钮
+        if (pagination.has_prev) {
+            paginationHtml += `
+                <li class="page-item">
+                    <a class="page-link" href="#comments-section" data-page="${pagination.prev_page}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+            `;
+        }
+        
+        // 页码按钮
+        const startPage = Math.max(1, pagination.current_page - 2);
+        const endPage = Math.min(pagination.total_pages, pagination.current_page + 2);
+        
+        if (startPage > 1) {
+            paginationHtml += `
+                <li class="page-item">
+                    <a class="page-link" href="#comments-section" data-page="1">1</a>
+                </li>
+            `;
+            if (startPage > 2) {
+                paginationHtml += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+            }
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            if (i === pagination.current_page) {
+                paginationHtml += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+            } else {
+                paginationHtml += `
+                    <li class="page-item">
+                        <a class="page-link" href="#comments-section" data-page="${i}">${i}</a>
+                    </li>
+                `;
+            }
+        }
+        
+        if (endPage < pagination.total_pages) {
+            if (endPage < pagination.total_pages - 1) {
+                paginationHtml += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+            }
+            paginationHtml += `
+                <li class="page-item">
+                    <a class="page-link" href="#comments-section" data-page="${pagination.total_pages}">${pagination.total_pages}</a>
+                </li>
+            `;
+        }
+        
+        // 下一页按钮
+        if (pagination.has_next) {
+            paginationHtml += `
+                <li class="page-item">
+                    <a class="page-link" href="#comments-section" data-page="${pagination.next_page}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            `;
+        }
+        
+        paginationUl.innerHTML = paginationHtml;
+        paginationContainer.classList.remove('d-none');
+        
+        // 绑定分页点击事件（使用事件委托）
+        bindPaginationEvents();
+    }
+    
+    // 绑定分页事件
+    function bindPaginationEvents() {
+        const paginationLinks = document.querySelectorAll('#commentsPagination .page-link[data-page]');
+        paginationLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const page = parseInt(this.getAttribute('data-page'));
+                if (page && page > 0) {
+                    loadComments(page);
+                    // 延迟滚动到评论区域
+                    setTimeout(() => {
+                        scrollToComments();
+                    }, 200);
+                }
+            });
+        });
+    }
+
+    // 绑定回复按钮事件
+    function bindReplyEvents() {
+        const replyBtns = document.querySelectorAll('.comment-reply-btn');
+        replyBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const commentId = this.getAttribute('data-comment-id');
+                const authorName = this.getAttribute('data-author-name');
+                showReplyForm(commentId, authorName);
+            });
+        });
+    }
+    
+    // 绑定折叠按钮事件
+    function bindCollapseEvents() {
+        const collapseBtns = document.querySelectorAll('.comment-collapse-btn');
+        collapseBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const commentId = this.getAttribute('data-comment-id');
+                const isCollapsed = this.getAttribute('data-collapsed') === 'true';
+                const repliesContainer = document.getElementById(`replies-${commentId}`);
+                const icon = this.querySelector('i');
+                
+                if (isCollapsed) {
+                    // 展开回复
+                    repliesContainer.style.display = 'block';
+                    this.setAttribute('data-collapsed', 'false');
+                    icon.className = 'fas fa-chevron-up';
+                    this.innerHTML = this.innerHTML.replace('展开', '收起');
+                } else {
+                    // 收起回复
+                    repliesContainer.style.display = 'none';
+                    this.setAttribute('data-collapsed', 'true');
+                    icon.className = 'fas fa-chevron-down';
+                    this.innerHTML = this.innerHTML.replace('收起', '展开');
+                }
+            });
+        });
+    }
+    
+    // 显示回复表单
+    function showReplyForm(parentId, authorName) {
+        // 隐藏其他回复表单
+        document.querySelectorAll('.reply-form-container').forEach(container => {
+            container.style.display = 'none';
+        });
+        
+        const container = document.getElementById(`replyForm-${parentId}`);
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="reply-form mt-3">
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-reply"></i> 回复给 <strong>${escapeHtml(authorName)}</strong>
+                </div>
+                <form id="replyForm-${parentId}-form">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="replyNickname-${parentId}" class="form-label">昵称（可选）</label>
+                            <input type="text" class="form-control" id="replyNickname-${parentId}" name="nickname" maxlength="50" placeholder="请输入您的昵称...">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">状态</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="replyIsPrivate-${parentId}" name="isPrivate">
+                                <label class="form-check-label" for="replyIsPrivate-${parentId}">
+                                    <i class="fas fa-eye-slash"></i>
+                                    仅作者可见
+                                </label>
+                            </div>
+                            <div class="form-text">
+                                <small>仅作者可见的评论将不会被回复，建议留下联系方式</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="replyContent-${parentId}" class="form-label">回复内容 <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="replyContent-${parentId}" name="content" rows="4" required maxlength="1000" placeholder="请输入您的回复内容..."></textarea>
+                        <div class="invalid-feedback">请输入回复内容（2-1000个字符）</div>
+                        <div class="form-text">
+                            <span id="replyCharCount-${parentId}" class="char-count">0/1000 字符</span>
+                        </div>
+                    </div>
+                    <div class="reply-form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> 发表回复
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary ms-2" onclick="hideReplyForm(${parentId})">
+                            <i class="fas fa-times"></i> 取消
+                        </button>
+                    </div>
+                </form>
+            </div>
+        `;
+        
+        container.style.display = 'block';
+        
+        // 绑定表单事件
+        const form = document.getElementById(`replyForm-${parentId}-form`);
+        const contentField = document.getElementById(`replyContent-${parentId}`);
+        const charCountEl = document.getElementById(`replyCharCount-${parentId}`);
+        
+        // 字符计数功能
+        contentField.addEventListener('input', function() {
+            const length = this.value.length;
+            charCountEl.textContent = `${length}/1000 字符`;
+            
+            if (length > 900) {
+                charCountEl.style.color = '#dc3545';
+            } else if (length > 700) {
+                charCountEl.style.color = '#ffc107';
+            } else {
+                charCountEl.style.color = '#6c757d';
+            }
+            
+            this.classList.remove('is-invalid');
+        });
+        
+        // 表单提交
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            submitReply(parentId);
+        });
+        
+        // 聚焦到内容输入框
+        contentField.focus();
+    }
+    
+    // 隐藏回复表单
+    function hideReplyForm(parentId) {
+        const container = document.getElementById(`replyForm-${parentId}`);
+        if (container) {
+            container.style.display = 'none';
+        }
+    }
+    
+    // 提交回复
+    function submitReply(parentId) {
+        const form = document.getElementById(`replyForm-${parentId}-form`);
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const contentField = document.getElementById(`replyContent-${parentId}`);
+        const nicknameField = document.getElementById(`replyNickname-${parentId}`);
+        const isPrivateField = document.getElementById(`replyIsPrivate-${parentId}`);
+        
+        // 验证内容
+        const content = contentField.value.trim();
+        if (!content) {
+            contentField.classList.add('is-invalid');
+            showMessage('请输入回复内容', 'error');
+            return;
+        }
+        
+        if (content.length < 2) {
+            contentField.classList.add('is-invalid');
+            showMessage('回复内容至少需要2个字符', 'error');
+            return;
+        }
+        
+        if (content.length > 1000) {
+            contentField.classList.add('is-invalid');
+            showMessage('回复内容不能超过1000个字符', 'error');
+            return;
+        }
+        
+        // 禁用提交按钮
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 发表中...';
+        
+        // 准备数据
+        const replyData = {
+            content: content,
+            nickname: nicknameField.value.trim(),
+            isPrivate: isPrivateField.checked,
+            parentId: parentId
+        };
+        
+        // 发送请求
+        fetch(`/add_comment/{{ article.id }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(replyData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 隐藏回复表单
+                hideReplyForm(parentId);
+                
+                // 显示成功消息
+                showMessage(data.message, 'success');
+                
+                // 刷新评论列表（保持当前页并滚动到合适位置）
+                loadComments(currentCommentsPage);
+                setTimeout(() => scrollToComments(), 200);
+                
+            } else {
+                showMessage(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('网络错误，请稍后重试', 'error');
+        })
+        .finally(() => {
+            // 恢复按钮状态
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 发表回复';
+        });
+    }
+    
+    // HTML转义函数
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // 显示消息提示函数
+    function showMessage(message, type = 'info') {
+        // 创建消息元素
+        const messageEl = document.createElement('div');
+        messageEl.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} position-fixed`;
+        messageEl.style.cssText = `
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            min-width: 300px;
+            animation: slideInRight 0.3s ease;
+        `;
+        messageEl.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+            ${message}
+        `;
+        
+        // 添加动画样式
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOutRight {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // 添加到页面
+        document.body.appendChild(messageEl);
+        
+        // 3秒后自动消失
+        setTimeout(() => {
+            messageEl.style.animation = 'slideOutRight 0.3s ease';
+            setTimeout(() => {
+                if (document.body.contains(messageEl)) {
+                    document.body.removeChild(messageEl);
+                }
+                if (document.head.contains(style)) {
+                    document.head.removeChild(style);
+                }
+            }, 300);
+        }, 3000);
+    }
+    
+    // 初始化加载评论列表
+    loadComments();
 });
 </script>
 {% endblock %} 

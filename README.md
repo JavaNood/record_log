@@ -98,11 +98,8 @@ SECRET_KEY = 'your-secret-key-here'
 #### 2.5 初始化数据库
 ```cmd
 # 全新部署：初始化数据库（包含所有表结构和访问统计功能）
-python init_db.py
+python init_db.py --init  
 
-# 如果是升级现有系统，例如需要添加访问统计功能：
-# python update_db.py
-```
 
 #### 2.6 启动应用
 ```cmd

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}首页 - 我的个人博客{% endblock %}
+{% block title %}竹影摇风细,茶香拌月长{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -123,9 +123,16 @@
 }
 
 .article-card.highlighted {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 123, 255, 0.15);
-    border-left: 4px solid #007bff;
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0, 123, 255, 0.3);
+    border: 2px solid #007bff;
+    animation: highlightPulse 3s ease-in-out;
+}
+
+@keyframes highlightPulse {
+    0% { transform: translateY(-5px) scale(1); }
+    50% { transform: translateY(-8px) scale(1.02); }
+    100% { transform: translateY(-5px) scale(1); }
 }
 
 /* 筛选按钮样式 */
@@ -321,7 +328,8 @@ mark.search-highlight {
                                 </span>
                             {% endif %}
                             <a href="{{ url_for('frontend.article_detail', article_id=article.id) }}" 
-                               class="text-decoration-none text-dark article-title-link">
+                               class="text-decoration-none text-dark article-title-link"
+                               onclick="recordPosition({{ article.id }})">
                                 {% if search_query %}
                                     {{ article.title | highlight_search(search_query) | safe }}
                                 {% else %}
@@ -340,12 +348,18 @@ mark.search-highlight {
                     <!-- 文章信息 -->
                     <div class="text-muted small mb-3">
                         <i class="fas fa-calendar-alt"></i> 发布于 {{ article.created_at.strftime('%Y年%m月%d日') }}
+                        {% if article.publish_location %}
+                            <span class="mx-2">|</span>
+                            <i class="fas fa-map-marker-alt"></i> {{ article.publish_location }}
+                        {% endif %}
                         {% if article.updated_at and article.updated_at != article.created_at %}
                             <span class="mx-2">|</span>
                             <i class="fas fa-edit"></i> 更新于 {{ article.updated_at.strftime('%Y年%m月%d日') }}
                         {% endif %}
                         <span class="mx-2">|</span>
                         <i class="fas fa-eye"></i> 浏览 {{ article.view_count }} 次
+                        <span class="mx-2">|</span>
+                        <i class="fas fa-heart"></i> 点赞 {{ article.likes_count }} 次
                         {% if article.tags %}
                             <span class="mx-2">|</span>
                             <i class="fas fa-tags"></i>
@@ -357,11 +371,26 @@ mark.search-highlight {
                     
                     <!-- 文章摘要 -->
                     {% if article.permission == 'verify' and not (article.id | is_verified) %}
-                        <div class="alert alert-info mb-0">
-                            <i class="fas fa-shield-alt me-2"></i>
-                            <strong>这篇文章需要验证后才能查看</strong>
-                            <p class="mb-0 mt-2 small text-muted">点击文章标题进行身份验证以查看完整内容</p>
-                        </div>
+                        {% if article.summary and article.summary.strip() %}
+                            <p class="card-text text-muted">
+                                {{ article.summary }}
+                            </p>
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-shield-alt me-2"></i>
+                                <strong>这篇文章需要验证后才能查看</strong>
+                                <p class="mb-0 mt-2 small text-muted">点击文章标题进行验证以查看完整内容</p>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-shield-alt me-2"></i>
+                                <strong>这篇文章需要验证后才能查看</strong>
+                                <p class="mb-0 mt-2 small text-muted">点击文章标题进行验证以查看完整内容</p>
+                            </div>
+                        {% endif %}
+                    {% elif article.summary %}
+                        <p class="card-text text-muted">
+                            {{ article.summary }}
+                        </p>
                     {% elif article.content %}
                         <p class="card-text text-muted">
                             {{ article.content | preview(2) }}
@@ -585,6 +614,8 @@ mark.search-highlight {
                             </h6>
                             <small class="text-muted">
                                 <i class="fas fa-eye"></i> {{ article.view_count }} 次浏览
+                                <span class="mx-1">|</span>
+                                <i class="fas fa-heart"></i> {{ article.likes_count }} 次点赞
                             </small>
                         </div>
                     </div>
@@ -1117,6 +1148,60 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 页面加载后初始化
     checkPageAnchor();
+    
+    // 恢复位置功能
+    restorePosition();
 });
+
+// 记录文章位置函数
+function recordPosition(articleId) {
+    const articleElement = document.getElementById('article-' + articleId);
+    if (articleElement) {
+        const rect = articleElement.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const elementTop = rect.top + scrollTop;
+        
+        // 保存位置信息到sessionStorage
+        const positionData = {
+            articleId: articleId,
+            scrollTop: scrollTop,
+            elementTop: elementTop,
+            currentUrl: window.location.href,
+            timestamp: Date.now()
+        };
+        
+        sessionStorage.setItem('articlePosition_' + articleId, JSON.stringify(positionData));
+    }
+}
+
+// 恢复位置函数
+function restorePosition() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const scrollToArticle = urlParams.get('scroll_to_article');
+    
+    if (scrollToArticle) {
+        // 从URL参数中获取要滚动到的文章ID
+        const targetElement = document.getElementById('article-' + scrollToArticle);
+        if (targetElement) {
+            setTimeout(() => {
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+                
+                // 高亮显示
+                targetElement.classList.add('highlighted');
+                setTimeout(() => {
+                    targetElement.classList.remove('highlighted');
+                }, 3000);
+                
+                // 清除URL参数
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.delete('scroll_to_article');
+                window.history.replaceState({}, '', newUrl);
+            }, 500);
+        }
+    }
+}
 </script>
 {% endblock %}

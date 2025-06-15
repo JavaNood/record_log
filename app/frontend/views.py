@@ -2,14 +2,45 @@
 # -*- coding: utf-8 -*-
 
 # 前端视图函数
-from flask import render_template, request, abort, session, jsonify
+from flask import render_template, request, abort, session, jsonify, url_for
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 from datetime import datetime, timedelta
 import re
 import markdown
 from . import frontend
-from ..models import Article, Tag, Config
+from ..models import Article, Tag, Config, Comment, Music
 from .. import db
 from sqlalchemy.orm import joinedload
+
+
+def _build_back_url_with_position(referer_url, article_id):
+    """构建带位置信息的返回URL"""
+    # 解析来源URL
+    parsed_url = urlparse(referer_url)
+    
+    # 如果来源URL是文章页面，使用首页代替
+    if '/article/' in parsed_url.path:
+        # 构建首页URL
+        return url_for('frontend.index', scroll_to_article=article_id, _external=False)
+    
+    query_params = parse_qs(parsed_url.query)
+    
+    # 如果已经有scroll_to_article参数，保持不变；否则添加
+    if 'scroll_to_article' not in query_params:
+        query_params['scroll_to_article'] = [str(article_id)]
+    
+    # 重新构建URL
+    new_query = urlencode(query_params, doseq=True)
+    new_url = urlunparse((
+        parsed_url.scheme,
+        parsed_url.netloc,
+        parsed_url.path,
+        parsed_url.params,
+        new_query,
+        parsed_url.fragment
+    ))
+    
+    return new_url
 
 
 def get_current_background():
@@ -22,14 +53,13 @@ def get_current_background():
         
         # 如果开启了时间变化，根据当前时间选择背景
         if time_based:
-            from datetime import datetime
             now = datetime.now()
             hour = now.hour
             
             if 6 <= hour < 11:
                 time_preset = 'spring'  # 春日暖阳
             elif 11 <= hour < 15:
-                time_preset = 'sky'     # 蓝天白云
+                time_preset = 'reading' # 阅读舒适
             elif 15 <= hour < 18:
                 time_preset = 'ocean'   # 深海蓝调
             elif 18 <= hour < 22:
@@ -42,12 +72,20 @@ def get_current_background():
         # 获取预设背景的渐变样式
         from ..admin.views import PRESET_BACKGROUNDS
         if current_preset in PRESET_BACKGROUNDS:
-            return {
+            preset_info = PRESET_BACKGROUNDS[current_preset]
+            result = {
                 'type': 'preset',
                 'preset': current_preset,
-                'gradient': PRESET_BACKGROUNDS[current_preset]['gradient'],
-                'name': PRESET_BACKGROUNDS[current_preset]['name']
+                'gradient': preset_info['gradient'],
+                'name': preset_info['name']
             }
+            
+            # 检查是否为动态背景
+            if 'animation' in preset_info:
+                result['type'] = 'animated'
+                result['animation'] = preset_info['animation']
+            
+            return result
     
     # 返回自定义背景或默认背景
     background_image = Config.get_value('background_image', '')
@@ -170,19 +208,19 @@ def index():
     all_tags = Tag.query.order_by(Tag.name).all()
     
     # 获取热门文章（按浏览量，应用相同的筛选条件）
-    top_articles = build_article_query(time_range, custom_date, tag_filter, permission_filter).order_by(
+    top_articles = build_article_query(time_range, custom_date, tag_filter, permission_filter).options(joinedload(Article.tags)).order_by(
         Article.view_count.desc()
     ).limit(5).all()
     
     # 获取时间线文章（应用相同的筛选条件，不受分页限制，用于导航）
     timeline_base_query = build_article_query(time_range, custom_date, tag_filter, permission_filter)
     if timeline_order == 'updated':
-        timeline_articles = timeline_base_query.order_by(
+        timeline_articles = timeline_base_query.options(joinedload(Article.tags)).order_by(
             Article.is_top.desc(),
             Article.updated_at.desc()
         ).limit(50).all()
     else:
-        timeline_articles = timeline_base_query.order_by(
+        timeline_articles = timeline_base_query.options(joinedload(Article.tags)).order_by(
             Article.is_top.desc(),
             Article.created_at.desc()
         ).limit(50).all()
@@ -256,19 +294,19 @@ def search():
     all_tags = Tag.query.order_by(Tag.name).all()
     
     # 获取热门文章（按浏览量，应用相同的筛选条件）
-    top_articles = build_article_query(time_range, custom_date, tag_filter, permission_filter).order_by(
+    top_articles = build_article_query(time_range, custom_date, tag_filter, permission_filter).options(joinedload(Article.tags)).order_by(
         Article.view_count.desc()
     ).limit(5).all()
     
     # 获取时间线文章（应用相同的筛选条件，不受分页限制，用于导航）
     timeline_base_query = build_article_query(time_range, custom_date, tag_filter, permission_filter)
     if timeline_order == 'updated':
-        timeline_articles = timeline_base_query.order_by(
+        timeline_articles = timeline_base_query.options(joinedload(Article.tags)).order_by(
             Article.is_top.desc(),
             Article.updated_at.desc()
         ).limit(50).all()
     else:
-        timeline_articles = timeline_base_query.order_by(
+        timeline_articles = timeline_base_query.options(joinedload(Article.tags)).order_by(
             Article.is_top.desc(),
             Article.created_at.desc()
         ).limit(50).all()
@@ -331,7 +369,15 @@ def article_detail(article_id):
         
         if not article_verified:
             # 未验证，返回验证页面
-            return render_template('frontend/verify.html', article=article)
+            # 获取来源URL，优先使用HTTP_REFERER，否则使用首页
+            referer_url = request.headers.get('Referer', url_for('frontend.index'))
+            # 如果来源URL就是当前验证页面，则使用首页
+            if '/article/' in referer_url and str(article_id) in referer_url:
+                referer_url = url_for('frontend.index')
+            
+            # 构建带位置信息的返回URL
+            back_url_with_position = _build_back_url_with_position(referer_url, article_id)
+            return render_template('frontend/verify.html', article=article, back_url=back_url_with_position)
     
     # 生成文章内容和目录
     article_html = ''
@@ -362,10 +408,25 @@ def article_detail(article_id):
     article.view_count += 1
     db.session.commit()
     
+    # 获取来源页面信息并构建带位置信息的返回URL
+    # 优先使用from_page参数，然后是referrer
+    from_page = request.args.get('from_page')
+    if from_page:
+        referrer_url = from_page
+    else:
+        referrer_url = request.referrer or url_for('frontend.index')
+    
+    return_url_with_position = _build_back_url_with_position(referrer_url, article_id)
+    
+    # 获取背景配置
+    background_config = get_current_background()
+    
     return render_template('frontend/article.html', 
                          article=article, 
                          article_html=article_html,
-                         article_toc=article_toc)
+                         article_toc=article_toc,
+                         background_config=background_config,
+                         return_url=return_url_with_position)
 
 
 @frontend.route('/verify_article', methods=['POST'])
@@ -375,7 +436,7 @@ def verify_article():
     article_id = data.get('article_id')
     user_answer = data.get('answer', '').strip()
     
-    if not article_id or not user_answer:
+    if not article_id:
         return jsonify({'success': False, 'message': '参数不完整'})
     
     # 确保article_id是整数
@@ -389,12 +450,8 @@ def verify_article():
     if not article or article.permission != 'verify':
         return jsonify({'success': False, 'message': '文章不存在或无需验证'})
     
-    # 检查文章是否设置了验证答案
-    if not article.verify_answer:
-        return jsonify({'success': False, 'message': '文章验证配置错误'})
-    
-    # 验证答案（不区分大小写，去除首尾空格）
-    correct_answer = article.verify_answer.strip().lower()
+    # 验证答案（支持空答案的情况）
+    correct_answer = (article.verify_answer or '').strip().lower()
     user_answer_clean = user_answer.strip().lower()
     
     if user_answer_clean == correct_answer:
@@ -415,6 +472,293 @@ def verify_article():
         return jsonify({'success': True, 'message': '验证成功'})
     else:
         return jsonify({'success': False, 'message': '答案错误，请重试'})
+
+
+@frontend.route('/api/get_location')
+def get_user_location():
+    """获取当前用户的地理位置信息"""
+    try:
+        # 获取用户IP地址
+        ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+        if ip_address and ',' in ip_address:
+            ip_address = ip_address.split(',')[0].strip()
+        
+        # 获取地理位置信息
+        from ..utils import get_ip_location
+        location = get_ip_location(ip_address)
+        
+        return jsonify({
+            'success': True,
+            'location': location,
+            'ip': ip_address
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'location': '未知地区',
+            'message': f'获取位置信息失败: {str(e)}'
+        })
+
+
+@frontend.route('/api/comments/<int:article_id>')
+def get_comments(article_id):
+    """获取文章评论列表API - 支持分页"""
+    try:
+        # 获取文章
+        article = Article.query.filter_by(id=article_id, status='published').first()
+        if not article:
+            return jsonify({'success': False, 'message': '文章不存在'})
+        
+        # 获取分页参数
+        page = request.args.get('page', 1, type=int)
+        per_page = 10  # 每页10条评论
+        
+        # 构建基础查询
+        query = Comment.query.options(db.joinedload(Comment.article)).filter_by(
+            article_id=article_id, 
+            status='approved'
+        ).order_by(Comment.created_at.desc())
+        
+        # 分别处理顶层评论和回复评论
+        # 顶层评论（用于分页）
+        root_comments_query = query.filter(Comment.parent_id.is_(None))
+        
+        # 使用分页获取顶层评论
+        root_comments_page = root_comments_query.paginate(
+            page=page,
+            per_page=per_page,
+            error_out=False
+        )
+        
+        root_comments = root_comments_page.items
+        
+        if not root_comments:
+            return jsonify({
+                'success': True,
+                'comments': [],
+                'pagination': {
+                    'current_page': page,
+                    'total_pages': root_comments_page.pages,
+                    'per_page': per_page,
+                    'total': root_comments_page.total,
+                    'has_prev': root_comments_page.has_prev,
+                    'has_next': root_comments_page.has_next,
+                    'prev_page': root_comments_page.prev_num,
+                    'next_page': root_comments_page.next_num
+                },
+                'stats': {
+                    'total_comments': 0,
+                    'root_comments': 0,
+                    'replies': 0
+                }
+            })
+        
+        # 获取当前页顶层评论的所有回复（优化：一次查询）
+        root_comment_ids = [comment.id for comment in root_comments]
+        all_replies = Comment.query.filter(
+            Comment.parent_id.in_(root_comment_ids),
+            Comment.status == 'approved'
+        ).order_by(Comment.created_at.asc()).all()
+        
+        # 构建评论数据结构
+        comments_data = []
+        
+        # 为每个顶层评论构建完整的数据（包括回复）
+        for root_comment in root_comments:
+            comment_dict = root_comment.to_dict()
+            # 添加格式化的时间显示
+            from ..utils import format_relative_time
+            comment_dict['time_display'] = format_relative_time(root_comment.created_at)
+            
+            # 添加该评论的所有回复
+            comment_replies = [reply for reply in all_replies if reply.parent_id == root_comment.id]
+            reply_data = []
+            for reply in comment_replies:
+                reply_dict = reply.to_dict()
+                reply_dict['time_display'] = format_relative_time(reply.created_at)
+                reply_data.append(reply_dict)
+            
+            comment_dict['replies'] = reply_data
+            comment_dict['has_replies'] = len(reply_data) > 0
+            comments_data.append(comment_dict)
+        
+        # 获取统计信息
+        total_root_comments = root_comments_query.count()
+        total_all_comments = query.count()
+        
+        return jsonify({
+            'success': True,
+            'comments': comments_data,
+            'pagination': {
+                'current_page': page,
+                'total_pages': root_comments_page.pages,
+                'per_page': per_page,
+                'total': total_root_comments,
+                'has_prev': root_comments_page.has_prev,
+                'has_next': root_comments_page.has_next,
+                'prev_page': root_comments_page.prev_num,
+                'next_page': root_comments_page.next_num
+            },
+            'stats': {
+                'total_comments': total_all_comments,
+                'root_comments': total_root_comments,
+                'replies': total_all_comments - total_root_comments
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'获取评论失败: {str(e)}'})
+
+
+@frontend.route('/add_comment/<int:article_id>', methods=['POST'])
+def add_comment(article_id):
+    """添加评论API"""
+    try:
+        # 获取文章
+        article = Article.query.filter_by(id=article_id, status='published').first()
+        if not article:
+            return jsonify({'success': False, 'message': '文章不存在'})
+        
+        # 检查文章是否允许评论
+        if hasattr(article, 'allow_comments') and not article.allow_comments:
+            return jsonify({'success': False, 'message': '该文章已关闭评论功能'})
+        
+        # 获取请求数据
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': '请求数据格式错误'})
+        
+        content = data.get('content', '').strip()
+        nickname = data.get('nickname', '').strip()
+        is_private = data.get('isPrivate', False)
+        parent_id = data.get('parentId')  # 父评论ID，用于回复功能
+        
+        # 验证父评论（如果是回复）
+        parent_comment = None
+        if parent_id:
+            parent_comment = Comment.query.filter_by(
+                id=parent_id, 
+                article_id=article_id,
+                status='approved'  # 只能回复已审核通过的评论
+            ).first()
+            if not parent_comment:
+                return jsonify({'success': False, 'message': '回复的评论不存在或未通过审核'})
+        
+        # 验证评论内容
+        if not content:
+            return jsonify({'success': False, 'message': '评论内容不能为空'})
+        
+        if len(content) < 2:
+            return jsonify({'success': False, 'message': '评论内容至少需要2个字符'})
+            
+        if len(content) > 1000:
+            return jsonify({'success': False, 'message': '评论内容不能超过1000个字符'})
+        
+        # 验证昵称长度
+        if nickname and len(nickname) > 50:
+            return jsonify({'success': False, 'message': '昵称长度不能超过50个字符'})
+        
+        # 获取用户IP地址
+        ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+        if ip_address and ',' in ip_address:
+            ip_address = ip_address.split(',')[0].strip()
+        
+        # 获取地理位置信息
+        from ..utils import get_ip_location
+        location = get_ip_location(ip_address)
+        
+        # 创建评论记录
+        comment = Comment(
+            content=content,
+            nickname=nickname if nickname else None,
+            ip_address=ip_address,
+            location=location,
+            is_private=is_private,
+            article_id=article_id,
+            parent_id=parent_id,  # 设置父评论ID
+            status='pending'  # 默认待审核状态
+        )
+        
+        db.session.add(comment)
+        
+        # 更新文章评论数量（包括待审核的评论）
+        if hasattr(article, 'comments_count'):
+            article.comments_count = article.comments.count() + 1
+        
+        db.session.commit()
+        
+        # 根据是否私密评论和是否回复返回不同消息
+        if parent_id:
+            # 这是一个回复
+            if is_private:
+                success_message = '回复已提交给作者！私密回复不会公开显示'
+            else:
+                success_message = '回复发表成功！等待管理员审核后显示'
+        else:
+            # 这是一个评论
+            if is_private:
+                success_message = '已提交给作者！私密评论不会公开显示'
+            else:
+                success_message = '评论发表成功！等待管理员审核后显示'
+        
+        return jsonify({
+            'success': True,
+            'message': success_message,
+            'comment': {
+                'id': comment.id,
+                'display_name': comment.display_name,
+                'location_display': comment.location_display,
+                'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'status': comment.status
+            }
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'发表评论失败: {str(e)}'})
+
+
+@frontend.route('/like_article/<int:article_id>', methods=['POST'])
+def like_article(article_id):
+    """文章点赞API接口"""
+    try:
+        # 获取文章
+        article = Article.query.filter_by(id=article_id, status='published').first()
+        if not article:
+            return jsonify({'success': False, 'message': '文章不存在'})
+        
+        # 获取已点赞文章列表
+        liked_articles = session.get('liked_articles', [])
+        
+        # 确保session中的数据是列表
+        if not isinstance(liked_articles, list):
+            liked_articles = []
+        
+        # 检查是否已经点赞
+        if article_id in liked_articles:
+            return jsonify({'success': False, 'message': '您已经为这篇文章点过赞了'})
+        
+        # 增加点赞数
+        article.likes_count += 1
+        
+        # 记录到session
+        liked_articles.append(article_id)
+        session['liked_articles'] = liked_articles
+        session.permanent = True
+        
+        # 保存到数据库
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': '点赞成功',
+            'likes_count': article.likes_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'点赞失败: {str(e)}'})
 
 
 @frontend.route('/api/article-page/<int:article_id>')
@@ -489,7 +833,7 @@ def markdown_filter(text):
         ],
         extension_configs={
             'markdown.extensions.toc': {
-                'title': '目录',
+                'title': '文章目录',
                 'anchorlink': False,
                 'permalink': False
             }
@@ -546,6 +890,17 @@ def is_verified_filter(article_id):
     return False
 
 
+# 添加点赞状态检查函数
+@frontend.app_template_filter('is_liked')
+def is_liked_filter(article_id):
+    """检查文章是否已被点赞"""
+    liked_articles = session.get('liked_articles', [])
+    if not isinstance(liked_articles, list):
+        return False
+    
+    return int(article_id) in liked_articles
+
+
 # 添加搜索关键词高亮过滤器
 @frontend.app_template_filter('highlight_search')
 def highlight_search_filter(text, search_query):
@@ -570,3 +925,60 @@ def highlight_search_filter(text, search_query):
             )
     
     return Markup(highlighted_text) 
+
+
+@frontend.route('/api/music/list')
+def get_music_list():
+    """获取音乐列表API"""
+    try:
+        # 检查音乐功能是否启用
+        music_enabled = Config.get_value('music_enabled', 'True') == 'True'
+        if not music_enabled:
+            return jsonify({
+                'success': True,
+                'music_list': [],
+                'config': {
+                    'enabled': False,
+                    'auto_play': False,
+                    'default_volume': 0.5
+                }
+            })
+        
+        # 获取所有启用的音乐文件
+        music_files = Music.query.filter_by(is_enabled=True).order_by(Music.created_at.desc()).all()
+        
+        # 获取音乐配置
+        music_auto_play = Config.get_value('music_auto_play', 'False') == 'True'
+        music_default_volume = float(Config.get_value('music_default_volume', '0.5'))
+        
+        # 转换为字典格式
+        music_list = []
+        for music in music_files:
+            music_list.append({
+                'id': music.id,
+                'display_name': music.display_name,
+                'web_path': music.web_path,
+                'file_size_mb': music.file_size_mb
+            })
+        
+        return jsonify({
+            'success': True,
+            'music_list': music_list,
+            'config': {
+                'enabled': True,
+                'auto_play': music_auto_play,
+                'default_volume': music_default_volume
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'获取音乐列表失败: {str(e)}',
+            'music_list': [],
+            'config': {
+                'enabled': False,
+                'auto_play': False,
+                'default_volume': 0.5
+            }
+        }) 

@@ -57,27 +57,20 @@ def create_app(config_name='default'):
     @app.after_request
     def add_security_headers(response):
         """为所有响应添加安全头"""
-        # 缓存控制头
         if 'Cache-Control' not in response.headers:
             if request.endpoint and request.endpoint.startswith('static'):
-                # 静态文件缓存30天
                 response.headers['Cache-Control'] = 'public, max-age=2592000'
             else:
-                # 动态内容不缓存
                 response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
                 response.headers['Pragma'] = 'no-cache'
                 response.headers['Expires'] = '0'
         
-        # 内容类型选项头（防止MIME嗅探）
         response.headers['X-Content-Type-Options'] = 'nosniff'
-        
-        # 其他推荐的安全头
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['X-XSS-Protection'] = '1; mode=block'
         
-        # 对于blob URL和图片响应，设置适当的缓存
         if response.content_type and response.content_type.startswith('image/'):
-            response.headers['Cache-Control'] = 'public, max-age=3600'  # 图片缓存1小时
+            response.headers['Cache-Control'] = 'public, max-age=3600'
         
         return response
     
@@ -88,56 +81,49 @@ def create_app(config_name='default'):
     @app.before_request
     def track_visitor():
         """记录访客访问信息"""
-        # 只记录GET请求且非静态文件和管理页面的访问
         if (request.method == 'GET' and 
             request.endpoint and 
-            not request.endpoint.startswith('static') and
-            not request.endpoint.startswith('admin')):
+            not request.endpoint.startswith(('static', 'admin')) and
+            app.config.get('STATS_ENABLE_VISITOR_LOG', True)):
             
             try:
                 from .models import SiteVisit
                 from flask import session
+                from datetime import timedelta
+                from .utils import get_local_now
                 
-                # 获取访客信息
                 ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
                 if ip_address and ',' in ip_address:
                     ip_address = ip_address.split(',')[0].strip()
                 
-                # 获取或生成session ID
                 if 'visitor_session' not in session:
                     import uuid
                     session['visitor_session'] = str(uuid.uuid4())
                     session.permanent = True
                 
                 session_id = session['visitor_session']
-                user_agent = request.headers.get('User-Agent', '')[:500]  # 限制长度
-                referer = request.headers.get('Referer', '')[:255]  # 限制长度
-                page_url = request.url[:255]  # 限制长度
+                page_url = request.url[:255]
                 
-                # 检查是否是重复访问（同一session在5分钟内访问同一页面不重复记录）
-                from datetime import datetime, timedelta
-                from .utils import get_local_now
+                # 检查重复访问（5分钟内不重复记录）
+                timeout_minutes = app.config.get('STATS_SESSION_TIMEOUT', 5)
                 recent_visit = SiteVisit.query.filter(
                     SiteVisit.session_id == session_id,
                     SiteVisit.page_url == page_url,
-                    SiteVisit.visit_time >= get_local_now() - timedelta(minutes=5)
+                    SiteVisit.visit_time >= get_local_now() - timedelta(minutes=timeout_minutes)
                 ).first()
                 
                 if not recent_visit:
-                    # 记录新的访问
                     visit = SiteVisit(
                         ip_address=ip_address,
                         session_id=session_id,
-                        user_agent=user_agent,
-                        referer=referer,
+                        user_agent=request.headers.get('User-Agent', '')[:500],
+                        referer=request.headers.get('Referer', '')[:255],
                         page_url=page_url
                     )
                     db.session.add(visit)
                     db.session.commit()
                     
-            except Exception as e:
-                # 访问统计失败不应该影响正常功能
-                print(f"访问统计记录失败: {e}")
+            except Exception:
                 db.session.rollback()
     
     # 注册蓝图

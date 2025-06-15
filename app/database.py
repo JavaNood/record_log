@@ -9,6 +9,7 @@
 from flask import Flask
 from . import create_app, db
 from .models import Admin, Config
+from .utils import get_local_now
 import os
 
 
@@ -27,7 +28,8 @@ def init_database():
     if not admin:
         admin = Admin(
             username='admin',
-            email='admin@example.com'
+            email='admin@example.com',
+            created_at=get_local_now()
         )
         admin.set_password('admin123')
         db.session.add(admin)

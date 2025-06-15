@@ -334,4 +334,210 @@ body {
 
 .bg-white-translucent {
     background-color: rgba(255, 255, 255, 0.9);
+}
+
+/* 评论回复功能样式 */
+.comment-item {
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+.comment-item:hover {
+    background-color: rgba(0, 123, 255, 0.02);
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.comment-reply {
+    position: relative;
+}
+
+.comment-reply::before {
+    content: '';
+    position: absolute;
+    left: -18px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(to bottom, #007bff, #6c757d);
+    border-radius: 2px;
+}
+
+.comment-reply-badge {
+    background-color: rgba(0, 123, 255, 0.1);
+    color: #007bff;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    margin-left: 8px;
+}
+
+.comment-actions {
+    margin-top: 10px;
+}
+
+.comment-reply-btn {
+    background: none;
+    border: 1px solid #dee2e6;
+    color: #6c757d;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+.comment-reply-btn:hover {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+    transform: translateY(-1px);
+}
+
+.reply-form {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 15px;
+    border-left: 4px solid #007bff;
+}
+
+.reply-form-actions {
+    margin-top: 15px;
+}
+
+/* 评论层级结构的垂直线条 */
+.comment-item[data-comment-id] {
+    position: relative;
+}
+
+/* 管理员回复的特殊样式（保留向后兼容） */
+.comment-item .comment-author-name:contains("管理员") {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+/* 评论加载动画 */
+.comments-loading {
+    opacity: 0.7;
+}
+
+.comments-loading .fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+/* 评论为空状态 */
+.comments-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+}
+
+.comments-empty i {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+/* 评论分页样式 */
+.comments-pagination {
+    margin-top: 2rem;
+}
+
+.comments-pagination .pagination {
+    margin-bottom: 0;
+}
+
+.comments-pagination .page-link {
+    color: #007bff;
+    border-color: #dee2e6;
+}
+
+.comments-pagination .page-link:hover {
+    color: #0056b3;
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}
+
+.comments-pagination .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+/* 评论折叠按钮样式 */
+.comment-collapse-btn {
+    background: none;
+    border: none;
+    color: #6c757d;
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+    margin-left: 0.5rem;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.comment-collapse-btn:hover {
+    color: #007bff;
+    background-color: #f8f9fa;
+}
+
+.comment-collapse-btn i {
+    margin-right: 0.25rem;
+}
+
+/* 评论回复区域样式 */
+.comment-replies {
+    margin-top: 0.5rem;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { 
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 作者标识样式更新 */
+.comment-item .comment-author-name[data-admin="true"] {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.comment-item .comment-author-name[data-admin="true"]::after {
+    content: " 👑";
+    font-size: 0.8em;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .comments-pagination .pagination {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .comments-pagination .page-item {
+        margin: 0.125rem;
+    }
+    
+    .comment-collapse-btn {
+        font-size: 0.8rem;
+        padding: 0.2rem 0.4rem;
+    }
+    
+    .comment-reply {
+        margin-left: 20px !important;
+        padding-left: 10px !important;
+    }
+    
+    .comment-reply::before {
+        left: -15px;
+    }
+    
+    .reply-form {
+        padding: 15px;
+    }
 } 

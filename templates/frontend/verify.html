@@ -4,6 +4,30 @@
 
 {% block extra_css %}
 <style>
+.back-home-btn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50px;
+    padding: 8px 16px;
+    color: #6c757d;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.back-home-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    color: #495057;
+    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+</style>
+<style>
 /* 验证页面样式 */
 .verify-container {
     min-height: 80vh;
@@ -219,6 +243,11 @@
 {% endblock %}
 
 {% block content %}
+<!-- 左上角返回按钮 -->
+<a href="{{ back_url or url_for('frontend.index') }}" class="back-home-btn">
+    <i class="fas fa-arrow-left"></i> 返回
+</a>
+
 <div class="verify-container">
     <div class="verify-card">
         <!-- 验证头部 -->
@@ -255,14 +284,17 @@
                         <i class="fas fa-question-circle"></i> 验证问题：
                     </label>
                     <div class="question-text">
-                        {{ article.verify_question or '请输入验证答案以继续阅读此文章。' }}
+                        {% if article.verify_answer %}
+                            {{ article.verify_question or '请输入验证答案以继续阅读此文章。' }}
+                        {% else %}
+                            {{ article.verify_question or '点击下方验证按钮即可继续阅读此文章。' }}
+                        {% endif %}
                     </div>
                     
                     <input type="text" 
                            class="answer-input" 
                            id="answerInput" 
-                           placeholder="请输入答案..." 
-                           required
+                           placeholder="{% if not article.verify_answer %}点击下方按钮即可验证{% else %}请输入答案...{% endif %}" 
                            autocomplete="off">
                 </div>
                 
@@ -280,11 +312,11 @@
                 
                 <button type="submit" class="verify-btn" id="verifyBtn">
                     <span class="loading-spinner" id="loadingSpinner"></span>
-                    <i class="fas fa-unlock"></i> 验证并查看文章
+                    <i class="fas fa-unlock"></i> {% if article.verify_answer %}验证并查看文章{% else %}点击继续阅读{% endif %}
                 </button>
                 
-                <a href="{{ url_for('frontend.index') }}" class="back-btn">
-                    <i class="fas fa-arrow-left"></i> 返回首页
+                <a href="{{ back_url or url_for('frontend.index') }}" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> 返回
                 </a>
             </form>
         </div>
@@ -311,10 +343,6 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         
         const answer = answerInput.value.trim();
-        if (!answer) {
-            showError('请输入答案');
-            return;
-        }
         
         // 开始验证
         startVerification();
@@ -334,9 +362,28 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 showSuccess();
-                // 验证成功，3秒后跳转到文章页面
+                // 验证成功，跳转到文章页面
                 setTimeout(() => {
-                    window.location.href = '{{ url_for("frontend.article_detail", article_id=article.id) }}';
+                    // 获取存储的位置信息
+                    const positionData = sessionStorage.getItem('articlePosition_{{ article.id }}');
+                    let articleUrl = '{{ url_for("frontend.article_detail", article_id=article.id) }}';
+                    
+                    if (positionData) {
+                        // 如果有位置信息，在URL中添加来源页面参数
+                        try {
+                            const position = JSON.parse(positionData);
+                            if (position.currentUrl) {
+                                const url = new URL(position.currentUrl);
+                                const params = new URLSearchParams(url.search);
+                                params.set('scroll_to_article', '{{ article.id }}');
+                                articleUrl += '?from_page=' + encodeURIComponent(url.pathname + '?' + params.toString());
+                            }
+                        } catch (e) {
+                            console.log('解析位置信息失败:', e);
+                        }
+                    }
+                    
+                    window.location.href = articleUrl;
                 }, 1500);
             } else {
                 showError(data.message || '验证失败，请重试');

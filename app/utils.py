@@ -10,49 +10,16 @@ from datetime import datetime, timezone, timedelta
 from flask import current_app
 
 
-# 中国时区 (UTC+8)
-CHINA_TZ = timezone(timedelta(hours=8))
-
-
 def get_local_now():
-    """获取当前本地时间（中国时区）"""
-    return datetime.now(CHINA_TZ)
-
-
-def utc_to_local(utc_dt):
-    """将UTC时间转换为本地时间"""
-    if utc_dt is None:
-        return None
-    
-    # 如果是naive datetime，假设它是UTC时间
-    if utc_dt.tzinfo is None:
-        utc_dt = utc_dt.replace(tzinfo=timezone.utc)
-    
-    # 转换为中国时区
-    return utc_dt.astimezone(CHINA_TZ)
-
-
-def local_to_utc(local_dt):
-    """将本地时间转换为UTC时间"""
-    if local_dt is None:
-        return None
-    
-    # 如果是naive datetime，假设它是本地时间
-    if local_dt.tzinfo is None:
-        local_dt = local_dt.replace(tzinfo=CHINA_TZ)
-    
-    # 转换为UTC
-    return local_dt.astimezone(timezone.utc).replace(tzinfo=None)
+    """获取当前本地时间（naive datetime）"""
+    return datetime.now()
 
 
 def format_datetime(dt, format_str='%Y-%m-%d %H:%M:%S'):
     """格式化时间显示"""
     if dt is None:
         return ''
-    
-    # 转换为本地时间后格式化
-    local_dt = utc_to_local(dt)
-    return local_dt.strftime(format_str)
+    return dt.strftime(format_str)
 
 
 def format_relative_time(dt):
@@ -60,11 +27,10 @@ def format_relative_time(dt):
     if dt is None:
         return ''
     
-    local_dt = utc_to_local(dt)
-    now = get_local_now()
+    now = datetime.now()
     
     # 计算时间差
-    diff = now - local_dt
+    diff = now - dt
     
     if diff.days > 0:
         if diff.days == 1:
@@ -86,4 +52,63 @@ def format_relative_time(dt):
         return f'{minutes}分钟前'
     else:
         hours = seconds // 3600
-        return f'{hours}小时前' 
+        return f'{hours}小时前'
+
+
+def get_ip_location(ip_address):
+    """获取IP地址的地理位置信息"""
+    if not ip_address or ip_address in ['127.0.0.1', 'localhost', '::1']:
+        return '本地'
+    
+    try:
+        import requests
+        # 使用免费的ip-api.com服务，支持中文
+        response = requests.get(
+            f'http://ip-api.com/json/{ip_address}?lang=zh-CN',
+            timeout=3  # 3秒超时
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('status') == 'success':
+                country = data.get('country', '')
+                region = data.get('regionName', '')  # 省份/州
+                
+                # 如果是中国，显示省份
+                if country == '中国' or country == 'China':
+                    if region and region != country:
+                        # 处理一些特殊的省份名称
+                        if region.endswith('省') or region.endswith('市') or region.endswith('区'):
+                            return region
+                        else:
+                            return f'{region}省'
+                    else:
+                        return '中国'
+                # 其他国家显示国家名
+                elif country:
+                    return country
+                else:
+                    return '未知地区'
+            else:
+                return '未知地区'
+        else:
+            return '未知地区'
+            
+    except Exception as e:
+        # 网络错误或其他异常，返回未知地区
+        return '未知地区'
+
+
+# 保留兼容性的函数（但简化实现）
+def utc_to_local(dt):
+    """兼容性函数：直接返回输入"""
+    return dt
+
+
+def local_to_utc(dt):
+    """兼容性函数：直接返回输入"""
+    return dt
+
+
+# 中国时区（保持兼容性）
+CHINA_TZ = timezone(timedelta(hours=8)) 

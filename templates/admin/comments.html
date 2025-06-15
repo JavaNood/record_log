@@ -1,0 +1,666 @@
+{% extends "admin/base.html" %}
+
+{% block title %}评论管理 - 后台管理系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- 页面标题和统计 -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="d-flex align-items-center">
+                    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary me-3" title="返回管理主界面">
+                        <i class="fas fa-arrow-left me-1"></i>返回主界面
+                    </a>
+                    <div>
+                        <h1 class="h3 mb-0">评论管理</h1>
+                        <p class="text-muted small mt-1">管理所有评论的状态和内容</p>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <div class="row g-2">
+                        <div class="col-auto">
+                            <div class="card border-0 bg-primary text-white">
+                                <div class="card-body py-2 px-3">
+                                    <div class="text-center">
+                                        <div class="h5 mb-0">{{ stats.pending }}</div>
+                                        <small>待审核</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="card border-0 bg-success text-white">
+                                <div class="card-body py-2 px-3">
+                                    <div class="text-center">
+                                        <div class="h5 mb-0">{{ stats.approved }}</div>
+                                        <small>已通过</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="card border-0 bg-danger text-white">
+                                <div class="card-body py-2 px-3">
+                                    <div class="text-center">
+                                        <div class="h5 mb-0">{{ stats.rejected }}</div>
+                                        <small>已拒绝</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="card border-0 bg-info text-white">
+                                <div class="card-body py-2 px-3">
+                                    <div class="text-center">
+                                        <div class="h5 mb-0">{{ stats.total }}</div>
+                                        <small>总计</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 筛选和搜索 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">状态筛选</label>
+                            <select name="status" class="form-select">
+                                <option value="all" {% if status_filter == 'all' %}selected{% endif %}>全部状态</option>
+                                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>待审核</option>
+                                <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>已通过</option>
+                                <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>已拒绝</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">文章筛选</label>
+                            <select name="article" class="form-select">
+                                <option value="">全部文章</option>
+                                {% for article in articles_with_comments %}
+                                <option value="{{ article.id }}" {% if article_id == article.id %}selected{% endif %}>
+                                    {{ article.title[:30] }}{% if article.title|length > 30 %}...{% endif %} ({{ article.comment_count }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">搜索评论</label>
+                            <input type="text" name="search" class="form-control" value="{{ search_query }}" 
+                                   placeholder="搜索评论内容或昵称...">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i> 筛选
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 批量操作工具栏 -->
+            <div class="card mb-4" id="batchToolbar" style="display: none;">
+                <div class="card-body py-2">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="text-muted">
+                            已选择 <span id="selectedCount">0</span> 条评论
+                        </span>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-success" onclick="batchAction('approve')">
+                                <i class="fas fa-check"></i> 批量通过
+                            </button>
+                            <button type="button" class="btn btn-sm btn-warning" onclick="batchAction('reject')">
+                                <i class="fas fa-times"></i> 批量拒绝
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="batchAction('delete')">
+                                <i class="fas fa-trash"></i> 批量删除
+                            </button>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSelection()">
+                            取消选择
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 评论列表 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-comments"></i> 评论列表
+                            {% if comments.total > 0 %}
+                                <span class="badge bg-secondary">{{ comments.total }}</span>
+                            {% endif %}
+                        </h5>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="selectAll">
+                            <label class="form-check-label" for="selectAll">
+                                全选
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if comments.items %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="40"></th>
+                                    <th>评论内容</th>
+                                    <th width="120">评论者</th>
+                                    <th width="200">所属文章</th>
+                                    <th width="100">状态</th>
+                                    <th width="140">时间</th>
+                                    <th width="160">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for comment in comments.items %}
+                                <tr>
+                                    <td>
+                                        <div class="form-check">
+                                            <input class="form-check-input comment-checkbox" type="checkbox" 
+                                                   value="{{ comment.id }}" id="comment{{ comment.id }}">
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="comment-content">
+                                            {% if comment.parent_id %}
+                                            <div class="comment-reply-indicator mb-2">
+                                                <i class="fas fa-reply text-muted"></i>
+                                                <small class="text-muted">回复给 
+                                                {% if comment.parent %}
+                                                    <strong>{{ comment.parent.display_name }}</strong>
+                                                {% else %}
+                                                    <span class="text-warning">已删除的评论</span>
+                                                {% endif %}
+                                                </small>
+                                            </div>
+                                            {% endif %}
+                                            <p class="mb-1">{{ comment.content[:100] }}{% if comment.content|length > 100 %}...{% endif %}</p>
+                                            <div class="small text-muted">
+                                                {% if comment.location_display %}
+                                                <i class="fas fa-map-marker-alt"></i> {{ comment.location_display }}
+                                                {% endif %}
+                                                {% if comment.is_private %}
+                                                <span class="badge bg-info ms-2">
+                                                    <i class="fas fa-eye-slash"></i> 仅作者可见
+                                                </span>
+                                                {% endif %}
+                                                {% if comment.parent_id %}
+                                                <span class="badge bg-secondary ms-2">
+                                                    <i class="fas fa-reply"></i> 回复
+                                                </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="text-truncate">
+                                            <strong>{{ comment.display_name }}</strong>
+                                            <br>
+                                            {% if comment.location and comment.location != '未知地区' %}
+                                            <small class="text-muted">
+                                                <i class="fas fa-map-marker-alt"></i> {{ comment.location }}
+                                            </small>
+                                            {% else %}
+                                            <small class="text-muted">
+                                                <i class="fas fa-question-circle"></i> 未知地区
+                                            </small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="text-truncate">
+                                            <a href="{{ url_for('frontend.article_detail', article_id=comment.article.id) }}" 
+                                               target="_blank" class="text-decoration-none">
+                                                {{ comment.article.title[:30] }}{% if comment.article.title|length > 30 %}...{% endif %}
+                                            </a>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if comment.status == 'approved' %}bg-success{% elif comment.status == 'pending' %}bg-warning{% else %}bg-danger{% endif %}">
+                                            {% if comment.status == 'approved' %}
+                                                已通过
+                                            {% elif comment.status == 'pending' %}
+                                                待审核
+                                            {% else %}
+                                                已拒绝
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ comment.created_at|datetime('%m-%d %H:%M') }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            {% if comment.status == 'pending' %}
+                                            <button type="button" class="btn btn-outline-success" 
+                                                    onclick="updateCommentStatus({{ comment.id }}, 'approve')"
+                                                    title="审核通过">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-warning" 
+                                                    onclick="updateCommentStatus({{ comment.id }}, 'reject')"
+                                                    title="拒绝">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            {% elif comment.status == 'approved' %}
+                                            <button type="button" class="btn btn-outline-warning" 
+                                                    onclick="updateCommentStatus({{ comment.id }}, 'reject')"
+                                                    title="设为拒绝">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            {% elif comment.status == 'rejected' %}
+                                            <button type="button" class="btn btn-outline-success" 
+                                                    onclick="updateCommentStatus({{ comment.id }}, 'approve')"
+                                                    title="审核通过">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            {% endif %}
+                                            <button type="button" class="btn btn-outline-danger" 
+                                                    onclick="deleteComment({{ comment.id }})"
+                                                    title="删除">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                            {% if comment.status == 'approved' %}
+                                            <button type="button" class="btn btn-outline-primary" 
+                                                    onclick="adminReply({{ comment.id }}, '{{ comment.display_name|e }}')"
+                                                    title="管理员回复">
+                                                <i class="fas fa-reply"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <div class="text-muted">
+                            <i class="fas fa-comment-slash fa-3x mb-3"></i>
+                            <p class="h5">暂无评论</p>
+                            <p>当前筛选条件下没有找到评论</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- 分页 -->
+                {% if comments.pages > 1 %}
+                <div class="card-footer">
+                    <nav aria-label="评论分页">
+                        <ul class="pagination justify-content-center mb-0">
+                            {% if comments.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('admin.comments', page=comments.prev_num, status=status_filter, article=article_id, search=search_query) }}">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for page_num in comments.iter_pages() %}
+                                {% if page_num %}
+                                    {% if page_num != comments.page %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('admin.comments', page=page_num, status=status_filter, article=article_id, search=search_query) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                    {% else %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                    {% endif %}
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if comments.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('admin.comments', page=comments.next_num, status=status_filter, article=article_id, search=search_query) }}">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+// 全选功能
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.comment-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+    updateBatchToolbar();
+});
+
+// 单个复选框变化
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('comment-checkbox')) {
+        updateBatchToolbar();
+    }
+});
+
+// 更新批量操作工具栏
+function updateBatchToolbar() {
+    const checked = document.querySelectorAll('.comment-checkbox:checked');
+    const toolbar = document.getElementById('batchToolbar');
+    const countSpan = document.getElementById('selectedCount');
+    
+    if (checked.length > 0) {
+        toolbar.style.display = 'block';
+        countSpan.textContent = checked.length;
+    } else {
+        toolbar.style.display = 'none';
+    }
+    
+    // 更新全选复选框状态
+    const allCheckboxes = document.querySelectorAll('.comment-checkbox');
+    const selectAllCheckbox = document.getElementById('selectAll');
+    selectAllCheckbox.checked = checked.length === allCheckboxes.length;
+    selectAllCheckbox.indeterminate = checked.length > 0 && checked.length < allCheckboxes.length;
+}
+
+// 清除选择
+function clearSelection() {
+    document.querySelectorAll('.comment-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    document.getElementById('selectAll').checked = false;
+    updateBatchToolbar();
+}
+
+// 单个评论状态更新
+function updateCommentStatus(commentId, action) {
+    if (!confirm(`确认要${action === 'approve' ? '通过' : '拒绝'}这条评论吗？`)) {
+        return;
+    }
+    
+    const url = action === 'approve' ? 
+        `/admin/comment/approve/${commentId}` : 
+        `/admin/comment/reject/${commentId}`;
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage(data.message, 'success');
+            location.reload();
+        } else {
+            showMessage(data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showMessage('操作失败，请重试', 'danger');
+    });
+}
+
+// 删除评论
+function deleteComment(commentId) {
+    if (!confirm('确认要删除这条评论吗？此操作不可撤销！')) {
+        return;
+    }
+    
+    fetch(`/admin/comment/delete/${commentId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage(data.message, 'success');
+            location.reload();
+        } else {
+            showMessage(data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showMessage('删除失败，请重试', 'danger');
+    });
+}
+
+// 批量操作
+function batchAction(action) {
+    const checked = document.querySelectorAll('.comment-checkbox:checked');
+    if (checked.length === 0) {
+        showMessage('请先选择要操作的评论', 'warning');
+        return;
+    }
+    
+    const actionNames = {
+        'approve': '审核通过',
+        'reject': '拒绝',
+        'delete': '删除'
+    };
+    
+    const actionName = actionNames[action];
+    if (!confirm(`确认要${actionName} ${checked.length} 条评论吗？${action === 'delete' ? '此操作不可撤销！' : ''}`)) {
+        return;
+    }
+    
+    const commentIds = Array.from(checked).map(cb => parseInt(cb.value));
+    
+    fetch('/admin/comments/batch-action', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            comment_ids: commentIds,
+            action: action
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage(data.message, 'success');
+            location.reload();
+        } else {
+            showMessage(data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showMessage('批量操作失败，请重试', 'danger');
+    });
+}
+
+// 显示消息
+function showMessage(message, type) {
+    // 创建临时提示
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alert);
+    
+    // 3秒后自动移除
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.parentNode.removeChild(alert);
+        }
+    }, 3000);
+}
+
+// 管理员回复功能
+function adminReply(commentId, authorName) {
+    // 创建回复模态框
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.innerHTML = `
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-reply"></i> 管理员回复
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        正在回复 <strong>${authorName}</strong> 的评论
+                    </div>
+                    <form id="adminReplyForm">
+                        <div class="mb-3">
+                            <label for="adminReplyContent" class="form-label">回复内容 <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="adminReplyContent" rows="5" required 
+                                     maxlength="1000" placeholder="请输入管理员回复内容..."></textarea>
+                            <div class="form-text">
+                                <span id="adminReplyCharCount">0/1000 字符</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="adminReplyPrivate">
+                                <label class="form-check-label" for="adminReplyPrivate">
+                                    <i class="fas fa-eye-slash"></i> 仅作者可见
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="submitAdminReply(${commentId})">
+                        <i class="fas fa-paper-plane"></i> 发表回复
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // 显示模态框
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    
+    // 字符计数功能
+    const contentField = document.getElementById('adminReplyContent');
+    const charCountEl = document.getElementById('adminReplyCharCount');
+    
+    contentField.addEventListener('input', function() {
+        const length = this.value.length;
+        charCountEl.textContent = `${length}/1000 字符`;
+        
+        if (length > 900) {
+            charCountEl.style.color = '#dc3545';
+        } else if (length > 700) {
+            charCountEl.style.color = '#ffc107';
+        } else {
+            charCountEl.style.color = '#6c757d';
+        }
+    });
+    
+    // 模态框关闭时移除DOM元素
+    modal.addEventListener('hidden.bs.modal', function() {
+        document.body.removeChild(modal);
+    });
+    
+    // 聚焦到内容输入框
+    setTimeout(() => {
+        contentField.focus();
+    }, 500);
+}
+
+// 提交管理员回复
+function submitAdminReply(parentId) {
+    const contentField = document.getElementById('adminReplyContent');
+    const isPrivateField = document.getElementById('adminReplyPrivate');
+    const submitBtn = event.target;
+    
+    const content = contentField.value.trim();
+    if (!content) {
+        showMessage('请输入回复内容', 'warning');
+        contentField.focus();
+        return;
+    }
+    
+    if (content.length < 2) {
+        showMessage('回复内容至少需要2个字符', 'warning');
+        contentField.focus();
+        return;
+    }
+    
+    if (content.length > 1000) {
+        showMessage('回复内容不能超过1000个字符', 'warning');
+        contentField.focus();
+        return;
+    }
+    
+    // 禁用提交按钮
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 发表中...';
+    
+    // 发送请求到管理员回复API
+    fetch('/admin/comment/reply', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            parentId: parentId,
+            content: content,
+            isPrivate: isPrivateField.checked
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage(data.message, 'success');
+            // 关闭模态框
+            bootstrap.Modal.getInstance(document.querySelector('.modal')).hide();
+            // 刷新页面
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showMessage(data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('网络错误，请稍后重试', 'danger');
+    })
+    .finally(() => {
+        // 恢复按钮状态
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 发表回复';
+    });
+}
+</script>
+{% endblock %} 
