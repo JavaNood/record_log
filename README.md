@@ -163,7 +163,7 @@ record_log/
 
 ## 🌐 在线演示
 
-- **访问地址**: [https://www.rlj.net.cn](https://www.rlj.net.cn)
+- **访问地址**: [https://www.rlj.net.cn](https://www.rlj.net.cn) ，如果需要体验音乐功能，请使用PC端访问，移动端适配较差。
 - **功能展示**: 体验完整的博客系统功能
 
 ## 📞 联系方式
