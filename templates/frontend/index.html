@@ -247,8 +247,8 @@ mark.search-highlight {
             <div class="mb-3">
                 <label class="form-label small text-muted">时间线排序方式</label>
                 <select class="form-select form-select-sm" id="timelineOrderFilter">
-                    <option value="created" {{ 'selected' if timeline_order == 'created' or not timeline_order else '' }}>按创建时间</option>
-                    <option value="updated" {{ 'selected' if timeline_order == 'updated' else '' }}>按更新时间</option>
+                    <option value="created" {{ 'selected' if timeline_order == 'created' else '' }}>按创建时间</option>
+                    <option value="updated" {{ 'selected' if timeline_order == 'updated' or not timeline_order else '' }}>按更新时间</option>
                 </select>
             </div>
             
@@ -707,7 +707,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function applyTimelineOrder(order) {
         const currentUrl = new URL(window.location);
         
-        if (order === 'created') {
+        if (order === 'updated') {
             currentUrl.searchParams.delete('timeline_order');
         } else {
             currentUrl.searchParams.set('timeline_order', order);
