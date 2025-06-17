@@ -187,7 +187,7 @@ def index():
     custom_date = request.args.get('date', '')  # 自定义日期
     tag_filter = request.args.get('tag', '')  # 标签筛选
     permission_filter = request.args.get('permission', 'all')  # 权限筛选
-    timeline_order = request.args.get('timeline_order', 'created')  # 时间线排序方式
+    timeline_order = request.args.get('timeline_order', 'updated')  # 时间线排序方式
     per_page = 10  # 每页显示10篇文章
     
     # 构建基础查询（应用所有筛选条件）
@@ -197,7 +197,7 @@ def index():
     # 优化：预加载标签关联以减少N+1查询
     articles = base_query.options(joinedload(Article.tags)).order_by(
         Article.is_top.desc(),  # 置顶文章优先
-        Article.created_at.desc()  # 然后按创建时间倒序
+        Article.updated_at.desc()  # 然后按更新时间倒序
     ).paginate(
         page=page,
         per_page=per_page,
@@ -214,15 +214,15 @@ def index():
     
     # 获取时间线文章（应用相同的筛选条件，不受分页限制，用于导航）
     timeline_base_query = build_article_query(time_range, custom_date, tag_filter, permission_filter)
-    if timeline_order == 'updated':
+    if timeline_order == 'created':
         timeline_articles = timeline_base_query.options(joinedload(Article.tags)).order_by(
             Article.is_top.desc(),
-            Article.updated_at.desc()
+            Article.created_at.desc()
         ).limit(50).all()
     else:
         timeline_articles = timeline_base_query.options(joinedload(Article.tags)).order_by(
             Article.is_top.desc(),
-            Article.created_at.desc()
+            Article.updated_at.desc()
         ).limit(50).all()
     
     # 获取欢迎语配置
@@ -262,7 +262,7 @@ def search():
     custom_date = request.args.get('date', '')  # 自定义日期
     tag_filter = request.args.get('tag', '')  # 标签筛选
     permission_filter = request.args.get('permission', 'all')  # 权限筛选
-    timeline_order = request.args.get('timeline_order', 'created')  # 时间线排序方式
+    timeline_order = request.args.get('timeline_order', 'updated')  # 时间线排序方式
     page = request.args.get('page', 1, type=int)
     per_page = 10
     
@@ -273,7 +273,7 @@ def search():
         # 简化搜索：单关键词标题搜索，优化：预加载标签关联
         articles = base_query.options(joinedload(Article.tags)).filter(Article.title.contains(search_query)).order_by(
             Article.is_top.desc(),
-            Article.created_at.desc()
+            Article.updated_at.desc()
         ).paginate(
             page=page,
             per_page=per_page,
@@ -283,7 +283,7 @@ def search():
         # 如果没有搜索词，返回所有已发布文章（带所有筛选），优化：预加载标签关联
         articles = base_query.options(joinedload(Article.tags)).order_by(
             Article.is_top.desc(),
-            Article.created_at.desc()
+            Article.updated_at.desc()
         ).paginate(
             page=page,
             per_page=per_page,
@@ -300,15 +300,15 @@ def search():
     
     # 获取时间线文章（应用相同的筛选条件，不受分页限制，用于导航）
     timeline_base_query = build_article_query(time_range, custom_date, tag_filter, permission_filter)
-    if timeline_order == 'updated':
+    if timeline_order == 'created':
         timeline_articles = timeline_base_query.options(joinedload(Article.tags)).order_by(
             Article.is_top.desc(),
-            Article.updated_at.desc()
+            Article.created_at.desc()
         ).limit(50).all()
     else:
         timeline_articles = timeline_base_query.options(joinedload(Article.tags)).order_by(
             Article.is_top.desc(),
-            Article.created_at.desc()
+            Article.updated_at.desc()
         ).limit(50).all()
     
     # 获取欢迎语配置
@@ -780,10 +780,10 @@ def get_article_page(article_id):
         if search_query:
             base_query = base_query.filter(Article.title.contains(search_query))
         
-        # 按置顶和创建时间排序（与首页排序逻辑保持一致）
+        # 按置顶和更新时间排序（与首页排序逻辑保持一致）
         ordered_query = base_query.order_by(
             Article.is_top.desc(),
-            Article.created_at.desc()
+            Article.updated_at.desc()
         )
         
         # 获取所有符合条件的文章ID列表
